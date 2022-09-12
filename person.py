@@ -1,5 +1,6 @@
 from util import *
-import numpy.random as nprnd
+from collections import deque
+
 
 class Person:
 
@@ -24,7 +25,7 @@ class Person:
         # label (may be one of 'healthy', 'infected', 'infectious', 'recovered')
         self.state = 'healthy'
 
-        self.rest_of_hosp_period = 0
-        self.viral_load = 0
+        self.time_in_infected_state = 0
+        self.viral_load = deque([0])
 
 

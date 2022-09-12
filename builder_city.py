@@ -1,7 +1,5 @@
 from util import *
 from person import Person
-from scipy.stats import norminvgauss
-from random import choices
 import numpy.random as nprnd
 from interaction import Interaction
 
@@ -12,7 +10,6 @@ class BuilderCity:
     PAIR_INTERACTION = Interaction(type_interaction="Home", degree=90)
     SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=50)
     BIG_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=20)
-    RANDOM_INTERACTION = Interaction(type_interaction="Random", degree=10)
 
     # _EARLIER_AGE_BEAR = 18
     # _LATE_AGE_BEAR = 35
@@ -99,9 +96,9 @@ class BuilderCity:
             size_big_group, size_small_group = (15, 3) if age < 25 else (30, 5) if age < 60 else (1, 5)
             people_ids_with_same_old = ids_people_by_age[age]
             np.random.shuffle(people_ids_with_same_old)
-            big_groups = np.array_split(people_ids_with_same_old, (len(people_ids_with_same_old) / size_big_group) + 1)
+            big_groups = np.array_split(people_ids_with_same_old, (len(people_ids_with_same_old) // size_big_group) + 1)
             for big_group in big_groups:
-                small_groups = np.array_split(big_group, (len(people_ids_with_same_old) / size_small_group) + 1)
+                small_groups = np.array_split(big_group, (len(people_ids_with_same_old) // size_small_group) + 1)
                 BuilderCity.conn_group(people, big_group, BuilderCity.BIG_GROUP_INTERACTION)
                 for small_group in small_groups:
                     BuilderCity.conn_group(people, small_group, BuilderCity.SMALL_GROUP_INTERACTION)
