@@ -12,10 +12,10 @@ class Person:
         self.age = age
 
         # self.location = Person.location
-        self.treatment_period = 0
-        self.infected_period = 0
-        self.non_specific_immun = 0.1
-        self.specific_immun = 0.1
+        # self.treatment_period = 0
+        # self.infected_period = 0
+        self.non_specific_immun = np.random.uniform(low=0.2, high=0.5)
+        self.specific_immun = 0.0
 
         # list of pairs kind of (agent, interaction with him)
         self.static_contact_list = []

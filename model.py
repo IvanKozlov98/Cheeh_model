@@ -1,15 +1,17 @@
 from builder_city import BuilderCity
 from person import Person
+from util import *
 from virus import Virus
 
 class Model:
-
+    _SECTION_CONFIG = "Model"
     def __init__(self,
                  config_file="config/config.ini",
                  num_days=365):
         self.people = BuilderCity.build_city()
         Virus.init()
 
+        self.VIR_LOAD_THRESHOLD = int(get_value_from_config(Model._SECTION_CONFIG, 'VIR_LOAD_THRESHOLD'))
         self.num_days = num_days
         self.infected_people_ids = set()  # ids infected persons in list of people
 
@@ -19,20 +21,23 @@ class Model:
     def _update_new_random_contacts(infected_person):
         pass
 
-
-    @staticmethod
-    def infect(other_person, interaction):
+    def infect(self, infected_person, contact_person, interaction):
         """
         Calculate giving virus load from self to other_person based on
             1) interaction
-            2) state of self agent
-            3) state of other agent
+            2) state of infected agent
+            3) state of contact agent
             4) virus characteristics
-        :param other_person:
-        :param interaction:
         :return: is other person became or not infected
         """
-        giving_virus_load = 0
+        # TODO(IvanKozlov98) write more complex formula than that
+        giving_virus_load = infected_person.virus_load / 10
+        # update virus load of contact person
+        contact_person.virus_load += giving_virus_load
+        # update state of contact person if needed
+        if contact_person.virus_load > self.VIR_LOAD_THRESHOLD:
+            contact_person.state = "infected"
+            return True
         return False
 
     def _spread_infection_step(self):
@@ -48,7 +53,7 @@ class Model:
             # infect other people
             for (contact_person, interaction) in \
                     (infected_person.static_contact_list + infected_person.random_contact_list):
-                is_infected = infected_person.infect(contact_person, interaction)
+                is_infected = self.infect(infected_person, contact_person, interaction)
                 if is_infected:
                     new_infected_ids.append(contact_person.id)
 

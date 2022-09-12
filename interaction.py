@@ -1,10 +1,11 @@
 
 class Interaction:
 
-    def __init__(self):
+    def __init__(self, type_interaction, degree):
         # may be one of {'Home', 'Work', 'Random'}
-        self.type_interaction = 'Home'
-        self.degree = 120
+        self.type_interaction = type_interaction
+        # number [1..100]
+        self.degree = degree
 
         #
         # self.summary_time = 0
