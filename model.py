@@ -11,7 +11,7 @@ class Model:
 
     def __init__(self,
                  config_file="config/config.ini",
-                 num_days=20):
+                 num_days=50):
         self.people = BuilderCity.build_city()
         Virus.init()
 
@@ -39,7 +39,7 @@ class Model:
         :return: is other person became or not infected
         """
         # TODO(IvanKozlov98) write more complex formula than that
-        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / 100)
+        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / 1000)
         # update virus load of contact person
         contact_person.viral_load[-1] += giving_viral_load
         # update state of contact person if needed
@@ -80,14 +80,14 @@ class Model:
 
     @staticmethod
     def ff(prev_viral_load, alpha, prev_specific_immun, time):
-        return (alpha + (prev_viral_load / (prev_viral_load * time + 100))) * prev_specific_immun
+        return alpha * (1 - prev_specific_immun) * (1 / (time + 1))
 
     @staticmethod
     def _update_specific_immun(person):
         prev_specific_immun = person.specific_immun
         person.specific_immun = min(1, prev_specific_immun +
                                     Model.ff(person.viral_load[0],
-                                             0.1,
+                                             0.6,
                                              prev_specific_immun,
                                              person.time_in_infected_state)
                                     )
@@ -143,4 +143,4 @@ class Model:
         for num_day in range(self.num_days):
             self.update()
             if debug_mode:
-                print(f"Number infected people: {len(self.infected_people_ids)}")
+                print(f"Day {num_day}; Number infected people: {len(self.infected_people_ids)}")
