@@ -28,4 +28,7 @@ class Person:
         self.time_in_infected_state = 0
         self.viral_load = deque([0])
 
+        self.recovering_rate = round(self.non_specific_immun * ((100 - self.age) / 10) * (1.1 if self.gender == 'm' else 1.2))
+        self.recovering_rate = 1 if self.recovering_rate == 0 else self.recovering_rate
 
+        self.recovering_time = 0
