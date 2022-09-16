@@ -6,10 +6,10 @@ from interaction import Interaction
 
 class BuilderCity:
     _SECTION_CONFIG = "City"
-    PARENT_CHILD_INTERACTION = Interaction(type_interaction="Home", degree=40)
-    PAIR_INTERACTION = Interaction(type_interaction="Home", degree=60)
-    SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=30)
-    BIG_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=10)
+    PARENT_CHILD_INTERACTION = Interaction(type_interaction="Home", degree=70)
+    PAIR_INTERACTION = Interaction(type_interaction="Home", degree=90)
+    SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=60)
+    BIG_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=20)
 
     # _EARLIER_AGE_BEAR = 18
     # _LATE_AGE_BEAR = 35

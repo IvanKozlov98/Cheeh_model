@@ -4,6 +4,9 @@ import random
 from interaction import Interaction
 from virus import Virus
 import numpy.random as nprnd
+import pickle
+import os.path
+import time
 
 
 class Model:
@@ -11,10 +14,21 @@ class Model:
     RANDOM_INTERACTION = Interaction(type_interaction="Random", degree=3)  # TODO(IvanKozlov98) move to another place
 
     def __init__(self,
+                 file_with_population='data/people_100K.pkl',
+                 cache_city=True,
                  config_file="config/config.ini"):
-        self.people = BuilderCity.build_city()
+        # build city
+        if os.path.isfile(file_with_population):
+            with open(file_with_population, 'rb') as f:
+                self.people = pickle.load(f)
+        else:
+            self.people = BuilderCity.build_city()
+            if cache_city:
+                with open(file_with_population, 'wb') as f:
+                    pickle.dump(self.people, f)
+        # initiation parameters virus
         Virus.init()
-
+        # and other...
         self.VIR_LOAD_THRESHOLD = int(get_value_from_config(Model._SECTION_CONFIG, 'VIR_LOAD_THRESHOLD'))
         self.num_days = int(get_value_from_config(Model._SECTION_CONFIG, 'DAYS_COUNT'))
         # init starting infected people
@@ -29,12 +43,12 @@ class Model:
         self.mild_threshold = int(get_value_from_config(Model._SECTION_CONFIG, 'MILD_THRESHOLD'))
         self.severe_threshold = int(get_value_from_config(Model._SECTION_CONFIG, 'SEVERE_THRESHOLD'))
 
-    def _update_new_random_contacts(self, infected_person):
+    def _get_new_random_contacts(self):
         new_random_contacts_count = np.random.randint(low=3, high=15) # TODO (IvanKozlov98) it should be precalculated
         new_random_contacts = []
         for _ in range(new_random_contacts_count):
             new_random_contacts.append((random.choice(list(self.people.keys())), Model.RANDOM_INTERACTION))
-        infected_person.random_contact_list = new_random_contacts
+        return new_random_contacts
 
     def infect(self, infected_person, contact_person, interaction):
         """
@@ -46,11 +60,11 @@ class Model:
         :return: is other person became or not infected
         """
         # TODO(IvanKozlov98) write more complex formula than that
-        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / 3000)
+        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / 300) * (1 - contact_person.specific_immun)
         # update virus load of contact person
         contact_person.viral_load[-1] += giving_viral_load
         # update state of contact person if needed
-        if contact_person.viral_load[-1] > self.VIR_LOAD_THRESHOLD:
+        if contact_person.viral_load[-1] > self.VIR_LOAD_THRESHOLD and contact_person.state == "healthy":
             contact_person.state = "infected"
             return True
         return False
@@ -64,10 +78,9 @@ class Model:
         for infected_person_id in self.infected_people_ids:
             # update new contacts infected people
             infected_person = self.people[infected_person_id]
-            self._update_new_random_contacts(infected_person)
             # infect other people
-            for (contact_person_id, interaction) in \
-                    (infected_person.static_contact_list + infected_person.random_contact_list):
+            # contact_list = self._get_contact_list_of_person(infected_person)
+            for (contact_person_id, interaction) in (infected_person.static_contact_list + self._get_new_random_contacts()):
                 is_infected = self.infect(infected_person, self.people[contact_person_id], interaction)
                 if is_infected:
                     new_infected_ids.add(contact_person_id)
@@ -104,6 +117,15 @@ class Model:
     def _update_non_specific_immun(person):
         pass
 
+    def _is_mild_infected(self, person):
+        return in_range(self.mild_threshold, person.viral_load[-1], self.severe_threshold)
+
+    def _is_severe_infected(self, person):
+        return in_range(self.mild_threshold, person.viral_load[-1], 1000000)
+
+    def _is_infected(self, person):
+        return person.viral_load[-1] >= self.VIR_LOAD_THRESHOLD
+
     @staticmethod
     def _is_recovered(person):
         return person.viral_load[-1] == 0
@@ -114,23 +136,25 @@ class Model:
                 person.viral_load[-1] = 0
 
     @staticmethod
-    def _update_contact_list_mild(person):
-        pass
+    def _get_contact_list_mild(person):
+        return list(filter(lambda x: x[1].type_interaction == 'Home', person.static_contact_list))
 
     @staticmethod
-    def _update_contact_list_severe(person):
-        pass
+    def _get_contact_list_severe(person):
+        return []
 
+    def _get_contact_list_of_person(self, person):
+        if person.state == 'mild':
+            return Model._get_contact_list_mild(person)
+        elif person.state == 'severe':
+            return Model._get_contact_list_severe(person)
+        return person.static_contact_list + self._get_new_random_contacts()
 
-    @staticmethod
-    def _recover_contact_lists(person):
-        pass
-
-    @staticmethod
-    def _update_person_after_treatment(person):
-        person.state = 'recovered'
-        # print(f"Recovering time: {infected_person.time_in_infected_state}")
-        person.time_in_infected_state = 0
+    # @staticmethod
+    # def _update_person_after_treatment(person):
+    #     person.state = 'recovered'
+    #     # print(f"Recovering time: {infected_person.time_in_infected_state}")
+    #     person.time_in_infected_state = 0
 
     def _update_state_of_infected_people_step(self):
         """
@@ -147,15 +171,17 @@ class Model:
             Model._update_non_specific_immun(infected_person)
             # update time in infected state
             infected_person.time_in_infected_state += 1
-            # ...
-            # update his contacts
-            if infected_person.viral_load[-1] >= self.mild_threshold:
-                Model._update_contact_list_mild(infected_person)
-            elif infected_person.viral_load[-1] >= self.severe_threshold:
-                Model._update_contact_list_severe(infected_person)
+            # update state of the infected person
+            if infected_person.state == 'infected' and self._is_mild_infected(infected_person):
+                infected_person.state = 'mild'
+            if infected_person.state == 'infected' or infected_person.state == 'healthy'\
+                    and self._is_severe_infected(infected_person):
+                infected_person.state = 'severe'
             # check if recovered
             if Model._is_recovered(infected_person):
-                Model._update_person_after_treatment(infected_person)
+                infected_person.state = 'healthy'
+                # print(f"Recovering time: {infected_person.time_in_infected_state}")
+                infected_person.time_in_infected_state = 0
                 recovered_ids.append(infected_person_id)
 
         return recovered_ids
@@ -165,17 +191,28 @@ class Model:
         Update state of model from one day to another
         """
         # step infection
+        s = time.time()
         new_infected_people_ids = self._spread_infection_step()
+        e = time.time()
+        print(f"Time spread_infection_step: {e - s}")
         # step updating params for infected people
+        s = time.time()
         recovered_people_ids = self._update_state_of_infected_people_step()
+        e = time.time()
+        print(f"Time update_state_of_infected_people_step: {e - s}")
         # step updating params for non-infected people
         self._recovery_non_infected_people_step()
+
+        if debug_mode:
+            print(f"Day {num_day}; "
+                  f"Number new infected people: {len(new_infected_people_ids.difference(self.infected_people_ids))}; "
+                  f"Number recovered people: {len(recovered_people_ids)}; " + '\033[0m', end='')
+
         # update infection group
         self.infected_people_ids.update(new_infected_people_ids)
         self.infected_people_ids.difference_update(recovered_people_ids)
+        print(f"\033[0m Number all infected people: {len(self.infected_people_ids)}")
 
-        if debug_mode:
-            print(f"Day {num_day}; Number infected people: {len(self.infected_people_ids)}; Number new infected people: {len(new_infected_people_ids)}; Number recovered people: {len(recovered_people_ids)}")
 
 
     def run(self, debug_mode=True):

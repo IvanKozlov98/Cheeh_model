@@ -7,8 +7,8 @@ class Person:
     next_id = 1
 
     def __init__(self, age, gender):
-        # , nonspecific_immun_state, , contact_list_home, contact_list_work, contact_list_random, state
-        self.id = get_random_id()
+        self.id = Person.next_id
+        Person.next_id += 1
         self.gender = gender
         self.age = age
 
