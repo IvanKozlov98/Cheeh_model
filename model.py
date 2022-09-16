@@ -1,3 +1,5 @@
+import numpy as np
+
 from builder_city import BuilderCity
 from util import *
 import random
@@ -7,6 +9,7 @@ import numpy.random as nprnd
 import pickle
 import os.path
 import time
+import matplotlib.pyplot as plt
 
 
 class Model:
@@ -42,12 +45,20 @@ class Model:
         self.trace_specific_immun[-1] = 1
         self.mild_threshold = int(get_value_from_config(Model._SECTION_CONFIG, 'MILD_THRESHOLD'))
         self.severe_threshold = int(get_value_from_config(Model._SECTION_CONFIG, 'SEVERE_THRESHOLD'))
+        #
+        self.number_random_contacts = np.random.choice(np.arange(3, 15), 360 * 1 * len(self.people) // 2)
+        self.ind_number_random_contacts = 0
+        #
+        self.random_contacts = np.random.choice(list(self.people.keys()), 360 * 15 * len(self.people) // 2)
+        self.ind_random_contacts = 0
 
     def _get_new_random_contacts(self):
-        new_random_contacts_count = np.random.randint(low=3, high=15) # TODO (IvanKozlov98) it should be precalculated
+        new_random_contacts_count = self.number_random_contacts[self.ind_number_random_contacts]
+        self.ind_number_random_contacts += 1
         new_random_contacts = []
         for _ in range(new_random_contacts_count):
-            new_random_contacts.append((random.choice(list(self.people.keys())), Model.RANDOM_INTERACTION))
+            new_random_contacts.append((int(self.random_contacts[self.ind_random_contacts]), Model.RANDOM_INTERACTION))
+            self.ind_random_contacts += 1
         return new_random_contacts
 
     def infect(self, infected_person, contact_person, interaction):
@@ -60,7 +71,7 @@ class Model:
         :return: is other person became or not infected
         """
         # TODO(IvanKozlov98) write more complex formula than that
-        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / 300) * (1 - contact_person.specific_immun)
+        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / 3000) * (1 - contact_person.specific_immun)
         # update virus load of contact person
         contact_person.viral_load[-1] += giving_viral_load
         # update state of contact person if needed
@@ -80,7 +91,8 @@ class Model:
             infected_person = self.people[infected_person_id]
             # infect other people
             # contact_list = self._get_contact_list_of_person(infected_person)
-            for (contact_person_id, interaction) in (infected_person.static_contact_list + self._get_new_random_contacts()):
+            for (contact_person_id, interaction) in (infected_person.static_contact_list +
+                                                     self._get_new_random_contacts()):
                 is_infected = self.infect(infected_person, self.people[contact_person_id], interaction)
                 if is_infected:
                     new_infected_ids.add(contact_person_id)
@@ -191,27 +203,32 @@ class Model:
         Update state of model from one day to another
         """
         # step infection
-        s = time.time()
+        # s = time.time()
         new_infected_people_ids = self._spread_infection_step()
-        e = time.time()
-        print(f"Time spread_infection_step: {e - s}")
+        # e = time.time()
+        # print(f"Time spread_infection_step: {e - s}")
         # step updating params for infected people
-        s = time.time()
+        # s = time.time()
         recovered_people_ids = self._update_state_of_infected_people_step()
-        e = time.time()
-        print(f"Time update_state_of_infected_people_step: {e - s}")
+        # e = time.time()
+        # print(f"Time update_state_of_infected_people_step: {e - s}")
         # step updating params for non-infected people
         self._recovery_non_infected_people_step()
 
+        number_new_infected_people = len(new_infected_people_ids.difference(self.infected_people_ids))
+        number_recovered_people = len(recovered_people_ids)
         if debug_mode:
             print(f"Day {num_day}; "
-                  f"Number new infected people: {len(new_infected_people_ids.difference(self.infected_people_ids))}; "
-                  f"Number recovered people: {len(recovered_people_ids)}; " + '\033[0m', end='')
+                  f"Number new infected people: {number_new_infected_people}; "
+                  f"Number recovered people: {number_recovered_people}; " + '\033[0m', end='')
 
         # update infection group
         self.infected_people_ids.update(new_infected_people_ids)
         self.infected_people_ids.difference_update(recovered_people_ids)
-        print(f"\033[0m Number all infected people: {len(self.infected_people_ids)}")
+        number_all_infected_people = len(self.infected_people_ids)
+        print(f"\033[0m Number all infected people: {number_all_infected_people}")
+
+        return number_new_infected_people, number_recovered_people, number_all_infected_people
 
 
 
@@ -219,8 +236,23 @@ class Model:
         """
         Run modeling
         """
+        list_number_new_infected_people, list_number_recovered_people, list_number_all_infected_people = [], [], []
         if debug_mode:
             print(f"Number of people: {len(self.people)}")
-        for num_day in range(self.num_days):
-            self.update(num_day, debug_mode)
+        # for num_day in range(self.num_days):
+        #     number_new_infected_people, number_recovered_people, number_all_infected_people = self.update(num_day, debug_mode)
+        #     list_number_new_infected_people.append(number_new_infected_people)
+        #     list_number_recovered_people.append(number_recovered_people)
+        #     list_number_all_infected_people.append(number_all_infected_people)
+
+        time_game = np.arange(self.num_days)
+        random_vals = np.random.beta(2, 18, size=1000)
+        y, x =  np.histogram(random_vals)
+        plt.plot(x[:-1], y)
+        # plt.plot(time_game, list_number_new_infected_people, label="number new infected people")
+        # ax.plot(time_game, list_number_recovered_people, label="number recovered people")
+        # ax.plot(time_game, list_number_all_infected_people, label="number all infected people")
+        plt.xlabel("time (per day)")
+        plt.legend()
+        plt.show()
 
