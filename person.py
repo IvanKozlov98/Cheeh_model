@@ -9,11 +9,24 @@ class Person:
 
     next_id = 1
     means_immunity = None
+    treatment_rates = dict()
+    treatment_rates_inds = dict()
+
+    start_treatment_times = dict()
+    start_treatment_times_inds = dict()
+
+    RANDOM_NUMBER_BY_AGE_COUNT = 1000
 
     @staticmethod
     def static_init():
-        Person.means_immunity = np.array([beta.pdf(x, a=2, b=4) for x in np.linspace(0.0, 1.0, 100)])
+        Person.means_immunity = np.array([beta.pdf(x, a=3, b=5) for x in np.linspace(0.1, 0.9, 100)])
         Person.means_immunity = Person.means_immunity / np.max(Person.means_immunity)
+        for age in range(100):
+            Person.treatment_rates[age] = np.repeat(-Person.means_immunity[age], Person.RANDOM_NUMBER_BY_AGE_COUNT) # -norm.rvs(loc=Person.means_immunity[age], scale=0.1, size=Person.RANDOM_NUMBER_BY_AGE_COUNT)
+            Person.treatment_rates_inds[age] = 0
+            #
+            Person.start_treatment_times[age] = np.repeat((1 - Person.means_immunity[age]) * 10.0, Person.RANDOM_NUMBER_BY_AGE_COUNT) #(1 - norm.rvs(loc=Person.means_immunity[age], scale=0.2, size=Person.RANDOM_NUMBER_BY_AGE_COUNT)) * 10.0
+            Person.start_treatment_times_inds[age] = 0
 
     def __init__(self, age, gender):
         self.id = Person.next_id
@@ -25,8 +38,18 @@ class Person:
         # self.treatment_period = 0
         # self.infected_period = 0
         self.non_specific_immun = get_in_range(0.1,
-                                               norm.rvs(loc=Person.means_immunity[self.age], scale=0.1),
+                                               Person.means_immunity[self.age], # TODO (IvanKozlov98) make random it
                                                1.0) / 2
+        self.treatment_rate = get_in_range(-0.9, Person.treatment_rates[age][Person.treatment_rates_inds[age]], -0.1)
+        Person.treatment_rates_inds[age] = 0 if Person.treatment_rates_inds[age] + 1 == Person.RANDOM_NUMBER_BY_AGE_COUNT else Person.treatment_rates_inds[age] + 1
+
+        self.start_treatment_time = get_in_range(1, Person.start_treatment_times[age][Person.start_treatment_times_inds[age]], 10)
+        Person.start_treatment_times_inds[age] = 0 if Person.start_treatment_times_inds[age] + 1 == Person.RANDOM_NUMBER_BY_AGE_COUNT else Person.start_treatment_times_inds[age] + 1
+        self.a_id = -1
+        self.b_id = -1
+
+
+
         self.specific_immun = 0.0
 
         # list of pairs kind of (agent, interaction with him)
@@ -37,10 +60,11 @@ class Person:
         self.state = 'healthy'
 
         self.time_in_infected_state = 0
-        self.viral_load = deque([0])
+        # self.viral_load = deque([0])
+        self.viral_load = 0
 
-        self.recovering_rate = round(self.non_specific_immun * ((100 - self.age) / 10) * (1.1 if self.gender == 'm' else 1.2))
-        self.recovering_rate = 1 if self.recovering_rate == 0 else self.recovering_rate
-        self.recovering_rate = int(self.recovering_rate)
-
-        self.recovering_time = 0
+        # self.recovering_rate = round(self.non_specific_immun * ((100 - self.age) / 10) * (1.1 if self.gender == 'm' else 1.2))
+        # self.recovering_rate = 1 if self.recovering_rate == 0 else self.recovering_rate
+        # self.recovering_rate = int(self.recovering_rate)
+        #
+        # self.recovering_time = 0
