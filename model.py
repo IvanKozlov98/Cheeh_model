@@ -1,56 +1,88 @@
 import numpy as np
-
 from builder_city import BuilderCity
 from util import *
-import random
 from interaction import Interaction
 from virus import Virus
 import numpy.random as nprnd
 import pickle
 import os.path
-import time
 import matplotlib.pyplot as plt
+from scipy.stats import beta
+from scipy.stats import norm
 
 
 class Model:
+
     _SECTION_CONFIG = "Model"
-    RANDOM_INTERACTION = Interaction(type_interaction="Random", degree=3)  # TODO(IvanKozlov98) move to another place
+    RANDOM_INTERACTION = Interaction(type_interaction="Random", degree=10)  # TODO(IvanKozlov98) move to another place
+    TRACES_COUNT_Y = 1000
+    TRACES_COUNT_X = 1000
+    MAX_TIME_INFECTED = 40
+
+    def init_traces(self):
+        """
+        Initiation viral and specific immunity traces
+        """
+        self.means_specific_immunity = np.array([beta.pdf(x, a=2, b=4) for x in np.linspace(0.0, 1.0, 100)])
+        self.means_specific_immunity = self.means_specific_immunity / np.max(self.means_specific_immunity)
+
+        specific_immunity_traces = []
+        for a_ in range(1, Model.TRACES_COUNT_Y + 1):
+            for b_ in range(Model.TRACES_COUNT_X):
+                a = a_ / Model.TRACES_COUNT_Y
+                b = (b_ / Model.TRACES_COUNT_X) * 10.0
+                specific_immunity_traces.append(np.array([1 / (1+np.exp(a * x + b)) for x in range(Model.MAX_TIME_INFECTED)]))
+
+
+
+    def init_random_starting_infected_people(self):
+        initial_infected_people_count = int(
+            get_value_from_config(Model._SECTION_CONFIG, 'INITIAL_INFECTED_PEOPLE_COUNT'))
+        self.infected_people_ids = set(
+            list(self.people.keys())[:initial_infected_people_count])  # ids infected persons in list of people
+        for infected_person_id in self.infected_people_ids:
+            self.people[infected_person_id].state = 'infected'
+            self.people[infected_person_id].viral_load[-1] = nprnd.randint(self.VIR_LOAD_THRESHOLD,
+                                                                           self.SEVERE_THRESHOLD)
 
     def __init__(self,
-                 file_with_population='data/people_100K.pkl',
+                 file_with_population=None,
                  cache_city=True,
                  config_file="config/config.ini"):
         # build city
-        if os.path.isfile(file_with_population):
+        if file_with_population is not None and os.path.isfile(file_with_population):
+            print('Loading population')
             with open(file_with_population, 'rb') as f:
                 self.people = pickle.load(f)
         else:
             self.people = BuilderCity.build_city()
             if cache_city:
+                if file_with_population is None:
+                    raise RuntimeError("If cache_city then file_with_population must be defined")
                 with open(file_with_population, 'wb') as f:
                     pickle.dump(self.people, f)
         # initiation parameters virus
         Virus.init()
         # and other...
         self.VIR_LOAD_THRESHOLD = int(get_value_from_config(Model._SECTION_CONFIG, 'VIR_LOAD_THRESHOLD'))
+        self.MILD_THRESHOLD = int(get_value_from_config(Model._SECTION_CONFIG, 'MILD_THRESHOLD'))
+        self.SEVERE_THRESHOLD = int(get_value_from_config(Model._SECTION_CONFIG, 'SEVERE_THRESHOLD'))
+
         self.num_days = int(get_value_from_config(Model._SECTION_CONFIG, 'DAYS_COUNT'))
         # init starting infected people
-        initial_infected_people_count = int(get_value_from_config(Model._SECTION_CONFIG, 'INITIAL_INFECTED_PEOPLE_COUNT'))
-        self.infected_people_ids = set(list(self.people.keys())[:initial_infected_people_count])  # ids infected persons in list of people
-        for infected_person_id in self.infected_people_ids:
-            self.people[infected_person_id].state = 'infected'
-            self.people[infected_person_id].viral_load[-1] = nprnd.randint(1000, 2000)
-
+        self.init_random_starting_infected_people()
+        # init trace for specific immunity
         self.trace_specific_immun = [1 / (1+np.exp(0.5*(-x + 10))) for x in np.linspace(0, 20, 20)]
         self.trace_specific_immun[-1] = 1
-        self.mild_threshold = int(get_value_from_config(Model._SECTION_CONFIG, 'MILD_THRESHOLD'))
-        self.severe_threshold = int(get_value_from_config(Model._SECTION_CONFIG, 'SEVERE_THRESHOLD'))
-        #
+        # init random values for simulation random contacts
         self.number_random_contacts = np.random.choice(np.arange(3, 15), 360 * 1 * len(self.people) // 2)
         self.ind_number_random_contacts = 0
-        #
         self.random_contacts = np.random.choice(list(self.people.keys()), 360 * 15 * len(self.people) // 2)
         self.ind_random_contacts = 0
+        # init variables for immunity traces
+        self.init_traces()
+
+
 
     def _get_new_random_contacts(self):
         new_random_contacts_count = self.number_random_contacts[self.ind_number_random_contacts]
@@ -71,7 +103,7 @@ class Model:
         :return: is other person became or not infected
         """
         # TODO(IvanKozlov98) write more complex formula than that
-        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / 3000) * (1 - contact_person.specific_immun)
+        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / 1000) * (1 - contact_person.specific_immun)
         # update virus load of contact person
         contact_person.viral_load[-1] += giving_viral_load
         # update state of contact person if needed
@@ -90,9 +122,7 @@ class Model:
             # update new contacts infected people
             infected_person = self.people[infected_person_id]
             # infect other people
-            # contact_list = self._get_contact_list_of_person(infected_person)
-            for (contact_person_id, interaction) in (infected_person.static_contact_list +
-                                                     self._get_new_random_contacts()):
+            for (contact_person_id, interaction) in self._get_contact_list_of_person(infected_person):
                 is_infected = self.infect(infected_person, self.people[contact_person_id], interaction)
                 if is_infected:
                     new_infected_ids.add(contact_person_id)
@@ -125,15 +155,11 @@ class Model:
         person.recovering_time = min(19, person.recovering_time + person.recovering_rate)
         person.specific_immun = self.trace_specific_immun[person.recovering_time]
 
-    @staticmethod
-    def _update_non_specific_immun(person):
-        pass
-
     def _is_mild_infected(self, person):
-        return in_range(self.mild_threshold, person.viral_load[-1], self.severe_threshold)
+        return in_range(self.MILD_THRESHOLD, person.viral_load[-1], self.SEVERE_THRESHOLD)
 
     def _is_severe_infected(self, person):
-        return in_range(self.mild_threshold, person.viral_load[-1], 1000000)
+        return in_range(self.MILD_THRESHOLD, person.viral_load[-1], 1000000)
 
     def _is_infected(self, person):
         return person.viral_load[-1] >= self.VIR_LOAD_THRESHOLD
@@ -162,11 +188,9 @@ class Model:
             return Model._get_contact_list_severe(person)
         return person.static_contact_list + self._get_new_random_contacts()
 
-    # @staticmethod
-    # def _update_person_after_treatment(person):
-    #     person.state = 'recovered'
-    #     # print(f"Recovering time: {infected_person.time_in_infected_state}")
-    #     person.time_in_infected_state = 0
+    @staticmethod
+    def _update_non_specific_immun(infected_person):
+        pass
 
     def _update_state_of_infected_people_step(self):
         """
@@ -203,15 +227,9 @@ class Model:
         Update state of model from one day to another
         """
         # step infection
-        # s = time.time()
         new_infected_people_ids = self._spread_infection_step()
-        # e = time.time()
-        # print(f"Time spread_infection_step: {e - s}")
         # step updating params for infected people
-        # s = time.time()
         recovered_people_ids = self._update_state_of_infected_people_step()
-        # e = time.time()
-        # print(f"Time update_state_of_infected_people_step: {e - s}")
         # step updating params for non-infected people
         self._recovery_non_infected_people_step()
 
@@ -239,19 +257,16 @@ class Model:
         list_number_new_infected_people, list_number_recovered_people, list_number_all_infected_people = [], [], []
         if debug_mode:
             print(f"Number of people: {len(self.people)}")
-        # for num_day in range(self.num_days):
-        #     number_new_infected_people, number_recovered_people, number_all_infected_people = self.update(num_day, debug_mode)
-        #     list_number_new_infected_people.append(number_new_infected_people)
-        #     list_number_recovered_people.append(number_recovered_people)
-        #     list_number_all_infected_people.append(number_all_infected_people)
+        for num_day in range(self.num_days):
+            number_new_infected_people, number_recovered_people, number_all_infected_people = self.update(num_day, debug_mode)
+            list_number_new_infected_people.append(number_new_infected_people)
+            list_number_recovered_people.append(number_recovered_people)
+            list_number_all_infected_people.append(number_all_infected_people)
 
         time_game = np.arange(self.num_days)
-        random_vals = np.random.beta(2, 18, size=1000)
-        y, x =  np.histogram(random_vals)
-        plt.plot(x[:-1], y)
-        # plt.plot(time_game, list_number_new_infected_people, label="number new infected people")
-        # ax.plot(time_game, list_number_recovered_people, label="number recovered people")
-        # ax.plot(time_game, list_number_all_infected_people, label="number all infected people")
+        plt.plot(time_game, list_number_new_infected_people, label="number new infected people")
+        plt.plot(time_game, list_number_recovered_people, label="number recovered people")
+        plt.plot(time_game, list_number_all_infected_people, label="number all infected people")
         plt.xlabel("time (per day)")
         plt.legend()
         plt.show()

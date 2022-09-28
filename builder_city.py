@@ -2,14 +2,15 @@ from util import *
 from person import Person
 import numpy.random as nprnd
 from interaction import Interaction
+import numpy as np
 
 
 class BuilderCity:
     _SECTION_CONFIG = "City"
-    PARENT_CHILD_INTERACTION = Interaction(type_interaction="Home", degree=40)
-    PAIR_INTERACTION = Interaction(type_interaction="Home", degree=60)
-    SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=30)
-    BIG_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=10)
+    PARENT_CHILD_INTERACTION = Interaction(type_interaction="Home", degree=170)
+    PAIR_INTERACTION = Interaction(type_interaction="Home", degree=1000)
+    SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=180)
+    BIG_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=30)
 
     # _EARLIER_AGE_BEAR = 18
     # _LATE_AGE_BEAR = 35
@@ -110,6 +111,7 @@ class BuilderCity:
 
         :return: dict of people with static contacts {people_id -> people}
         """
+        Person.static_init()
         np.random.seed(42)
         population_count = int(get_value_from_config(BuilderCity._SECTION_CONFIG, 'POPULATION_COUNT'))
         name_location = get_value_from_config(BuilderCity._SECTION_CONFIG, 'NAME_LOCATION')
