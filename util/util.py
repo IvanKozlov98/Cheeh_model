@@ -1,12 +1,9 @@
 import configparser
 
 
-config = configparser.ConfigParser()
-CONFIG_FILE = "config/config.ini"
-config.read(CONFIG_FILE)
-
-
-def get_value_from_config(section, key):
+def get_value_from_config(file, section, key):
+    config = configparser.ConfigParser()
+    config.read(file)
     return config.get(section, key)
 
 

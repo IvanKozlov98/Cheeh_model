@@ -1,12 +1,14 @@
-from util import *
-from person import Person
-import numpy.random as nprnd
-from interaction import Interaction
+from util.util import *
+from model.person import Person
+from model.interaction import Interaction
+
 import numpy as np
+import numpy.random as nprnd
 
 
 class BuilderCity:
-    _SECTION_CONFIG = "City"
+
+    # TODO(IvanKozlov98) move to another place
     PARENT_CHILD_INTERACTION = Interaction(type_interaction="Home", degree=170)
     PAIR_INTERACTION = Interaction(type_interaction="Home", degree=1000)
     SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=180)
@@ -106,15 +108,13 @@ class BuilderCity:
 
 
     @staticmethod
-    def build_city():
+    def build_city(population_count):
         """
 
         :return: dict of people with static contacts {people_id -> people}
         """
         Person.static_init()
         np.random.seed(42)
-        population_count = int(get_value_from_config(BuilderCity._SECTION_CONFIG, 'POPULATION_COUNT'))
-        name_location = get_value_from_config(BuilderCity._SECTION_CONFIG, 'NAME_LOCATION')
         # 1 step: create man and woman with given age
         man_count = round(population_count * 0.45)
         woman_count = population_count - man_count
