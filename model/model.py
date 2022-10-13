@@ -1,3 +1,5 @@
+import time
+
 from city.location import Location
 from util.util import *
 from model.interaction import Interaction
@@ -6,6 +8,28 @@ from virus.virus import Virus
 import numpy as np
 import numpy.random as nprnd
 import matplotlib.pyplot as plt
+
+
+def add_if(xs, x):
+    if x is not None:
+        xs.append(x)
+
+class ModelStats:
+    def __init__(self):
+        self.list_number_new_infected_people = []
+        self.list_number_recovered_people = []
+        self.list_number_all_infected_people = []
+        self.list_dead_people = []
+
+    def add_values(self,
+                   number_new_infected_people=None,
+                   number_recovered_people=None,
+                   number_all_infected_people=None,
+                   dead_people=None):
+        add_if(self.list_number_new_infected_people, number_new_infected_people)
+        add_if(self.list_number_recovered_people, number_recovered_people)
+        add_if(self.list_number_all_infected_people, number_all_infected_people)
+        add_if(self.list_dead_people, dead_people)
 
 
 class Model:
@@ -31,7 +55,7 @@ class Model:
                 viral_load_trace[0] = 800  # TODO (IvanKozlov98) maybe save viral load given person
                 for t in range(1, Model.MAX_TIME_INFECTED):
                     viral_load_trace[t] = (viral_load_trace[t - 1] +
-                                           alpha * viral_load_trace[t - 1] * Virus.spread_rate[t]
+                                           alpha * viral_load_trace[t - 1] * self.virus.spread_rate[t]
                                            ) * (1 - specific_immunity_trace[t])
                 self.viral_load_traces[i, j] = viral_load_trace
                 self.specific_immunity_traces[i, j] = specific_immunity_trace
@@ -54,18 +78,34 @@ class Model:
                  config_model,
                  config_virus,
                  config_cities,
-                 use_cache_population=False,
-                 cache_file_population=True):
+                 use_cache_population=True,
+                 cache_file_population=True,
+                 gui=False):
+        """
+
+        :param config_model: dict or file with config
+        :param config_virus: dict or file with config
+        :param config_cities: dict or file with config
+        :param use_cache_population:
+        :param cache_file_population:
+        :param gui:
+        """
+        self.flag_run = True
+        self.gui = gui
+        # init model stats
+        self.model_stats = ModelStats()
+        # init view
+        self.view = None
         # init city
         location = Location(config_cities, use_cache=use_cache_population, cache_file=cache_file_population)
         self.people = location.get_population()
         # init virus
-        Virus.init(config_virus)
+        self.virus = Virus(config_virus)
         # init model parameters
-        self.VIR_LOAD_THRESHOLD = int(get_value_from_config(config_model, Model._SECTION_CONFIG, 'VIR_LOAD_THRESHOLD'))
-        self.MILD_THRESHOLD = int(get_value_from_config(config_model, Model._SECTION_CONFIG, 'MILD_THRESHOLD'))
-        self.SEVERE_THRESHOLD = int(get_value_from_config(config_model, Model._SECTION_CONFIG, 'SEVERE_THRESHOLD'))
-        self.DEAD_THRESHOLD = int(get_value_from_config(config_model, Model._SECTION_CONFIG, 'DEAD_THRESHOLD'))
+        self.VIR_LOAD_THRESHOLD = self.virus.VIR_LOAD_THRESHOLD
+        self.MILD_THRESHOLD = self.virus.MILD_THRESHOLD
+        self.SEVERE_THRESHOLD = self.virus.SEVERE_THRESHOLD
+        self.DEAD_THRESHOLD = self.virus.DEAD_THRESHOLD
 
         self.DAYS_COUNT = int(get_value_from_config(config_model, Model._SECTION_CONFIG, 'DAYS_COUNT'))
         # init starting infected people
@@ -91,6 +131,11 @@ class Model:
             self.ind_random_contacts += 1
         return new_random_contacts
 
+    def set_view(self, view):
+        self.view = view
+
+
+
     def infect(self, infected_person, contact_person, interaction):
         """
         Calculate giving virus load from self to other_person based on
@@ -109,6 +154,9 @@ class Model:
             self.make_person_infected(contact_person.id)
             return True
         return False
+
+    def stop_running(self):
+        self.flag_run = False
 
     def _spread_infection_step(self):
         """
@@ -235,7 +283,7 @@ class Model:
 
         return recovered_ids, dead_ids
 
-    def update(self, num_day=None, debug_mode=True):
+    def update(self, num_day):
         """
         Update state of model from one day to another
         """
@@ -249,10 +297,6 @@ class Model:
         # self._update_static_contact_lists(dead_ids)
         number_new_infected_people = len(new_infected_people_ids.difference(self.infected_people_ids))
         number_recovered_people = len(recovered_people_ids)
-        if debug_mode:
-            print(f"Day {num_day}; "
-                  f"Number new infected people: {number_new_infected_people}; "
-                  f"Number recovered people: {number_recovered_people}; " + '\033[0m', end='')
 
         # dead update
         for dead_id in dead_ids:
@@ -262,30 +306,36 @@ class Model:
         self.infected_people_ids.difference_update(recovered_people_ids)
         self.infected_people_ids.difference_update(dead_ids)
         number_all_infected_people = len(self.infected_people_ids)
-        print(f"\033[0m Number all infected people: {number_all_infected_people}")
 
-        return number_new_infected_people, number_recovered_people, number_all_infected_people, len(dead_ids)
 
-    def run(self, debug_mode=True):
+        if self.gui:
+            self.model_stats.add_values(
+                number_new_infected_people,
+                number_recovered_people,
+                number_all_infected_people,
+                len(dead_ids)
+            )
+            time.sleep(1)
+            self.view.update()
+        else: # if cmdline
+            print(f"Day {num_day}; "
+                  f"Number new infected people: {number_new_infected_people}; "
+                  f"Number recovered people: {number_recovered_people}; ", end='')
+            print(f"Number all infected people: {number_all_infected_people}")
+            print(f"Number dead people: {len(dead_ids)}")
+
+    def get_model_stats(self):
+        return self.model_stats
+
+    def run(self):
         """
         Run modeling
         """
-        list_number_new_infected_people, list_number_recovered_people, list_number_all_infected_people, list_dead_people = [], [], [], []
-        if debug_mode:
-            print(f"Number of people: {len(self.people)}")
-        for num_day in range(self.DAYS_COUNT):
-            number_new_infected_people, number_recovered_people, number_all_infected_people, number_dead_people = self.update(
-                num_day, debug_mode)
-            list_number_new_infected_people.append(number_new_infected_people)
-            list_number_recovered_people.append(number_recovered_people)
-            list_number_all_infected_people.append(number_all_infected_people)
-            list_dead_people.append(number_dead_people)
 
-        time_game = np.arange(self.DAYS_COUNT)
-        plt.plot(time_game, list_number_new_infected_people, label="number new infected people")
-        plt.plot(time_game, list_number_recovered_people, label="number recovered people")
-        plt.plot(time_game, list_number_all_infected_people, label="number all infected people")
-        plt.plot(time_game, list_dead_people, label="number dead people")
-        plt.xlabel("time (per day)")
-        plt.legend()
-        plt.show()
+        print(f"Number of people: {len(self.people)}")
+        for num_day in range(self.DAYS_COUNT):
+            if self.flag_run:
+                self.update(num_day)
+            else:
+                print("Stop running!")
+                break

@@ -1,16 +1,22 @@
-from util import *
+from util.util import *
 import numpy as np
 
 
 class Virus:
     _SECTION_CONFIG = "Virus"
-    spread_rate = None
 
-    @staticmethod
-    def init(config_file):
+    def __init__(self, config_file):
         # Virus.spread_rate = float(get_value_from_config(Virus._SECTION_CONFIG, 'SPREAD_RATE'))
-        Virus.spread_rate = np.zeros(40)
-        Virus.spread_rate[0] = 2
+        self.spread_rate = np.zeros(40)
+        self.spread_rate[0] = 2
         for i in range(1, 40):
-            Virus.spread_rate[i] = Virus.spread_rate[i - 1] / 1.23
+            self.spread_rate[i] = self.spread_rate[i - 1] / 1.23
+
+        self.VIR_LOAD_THRESHOLD = int(get_value_from_config(config_file, Virus._SECTION_CONFIG, 'VIR_LOAD_THRESHOLD'))
+        self.MILD_THRESHOLD = int(get_value_from_config(config_file, Virus._SECTION_CONFIG, 'MILD_THRESHOLD'))
+        self.SEVERE_THRESHOLD = int(get_value_from_config(config_file, Virus._SECTION_CONFIG, 'SEVERE_THRESHOLD'))
+        self.DEAD_THRESHOLD = int(get_value_from_config(config_file, Virus._SECTION_CONFIG, 'DEAD_THRESHOLD'))
+
+
+
 

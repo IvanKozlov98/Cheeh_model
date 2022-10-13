@@ -1,10 +1,20 @@
 import configparser
 
 
-def get_value_from_config(file, section, key):
+def get_value_from_config(origin, section, key):
+    if isinstance(origin, str):
+        config = configparser.ConfigParser()
+        config.read(origin)
+        return config.get(section, key)
+    return origin[key]
+
+
+def save_dict_as_config(dict_, section, filename):
     config = configparser.ConfigParser()
-    config.read(file)
-    return config.get(section, key)
+    data_ = {section : dict_}
+    config.read_dict(data_)
+    with open(filename, 'w') as configfile:
+        config.write(configfile)
 
 
 def in_range(left, num, right):

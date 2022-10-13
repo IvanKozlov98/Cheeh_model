@@ -7,7 +7,7 @@ import os
 class Location:
     _SECTION_CONFIG = "City"
 
-    def __init__(self, config_file, use_cache=False, cache_file=True):
+    def __init__(self, config_file, use_cache=True, cache_file=True):
         population_count = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'POPULATION_COUNT'))
         self.name_location = get_value_from_config(config_file, Location._SECTION_CONFIG, 'NAME_LOCATION')
 
@@ -26,7 +26,7 @@ class Location:
 
     @staticmethod
     def _get_filename_city(population_count, name_location):
-        return "../cache_data/" + name_location + str(population_count) + ".pkl"
+        return "cache_data/" + name_location + str(population_count) + ".pkl"
 
     def get_population(self):
         return self.people
