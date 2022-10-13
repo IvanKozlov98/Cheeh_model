@@ -310,7 +310,7 @@ class GuiApp(tk.Tk):
         new_item.add_command(label='Load model parameters', command=load_model_config)
         new_item.add_command(label='Load virus parameters', command=load_virus_config)
         new_item.add_command(label='Load city parameters', command=load_city_config)
-        menu.add_cascade(label='Файл', font=("Helvetica", "16"), menu=new_item)
+        menu.add_cascade(label='File', font=("Helvetica", "16"), menu=new_item)
         self.config(menu=menu)
         ##########################################
         # set default values
