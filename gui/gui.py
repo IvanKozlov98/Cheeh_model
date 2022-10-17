@@ -81,6 +81,14 @@ class GuiApp(tk.Tk):
     def notify(self):
         ...
 
+    def clear_graph(self):
+        self.figure = Figure(figsize=(5, 4), dpi=170)
+        self.plot = self.figure.add_subplot(1, 1, 1)
+        self.plot.plot([], [])
+        self.canvas = FigureCanvasTkAgg(self.figure, self.tab_epidemic)
+        self.canvas.get_tk_widget().grid(row=0, column=0)
+        self.figure.canvas.draw()
+
     def stop_program(self):
         self.controller.stop()
 
@@ -270,6 +278,9 @@ class GuiApp(tk.Tk):
 
         saveConfigButton = Button(frameBottom, text="Save configs", fg="black", command=self.save_configs)
         saveConfigButton.pack(side=RIGHT)
+
+        clearButton = Button(frameBottom, text="Clear graph", fg="black", command=self.clear_graph)
+        clearButton.pack(side=RIGHT)
 
         ####
         tab_control.pack(expand=1, fill='both')

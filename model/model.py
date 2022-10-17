@@ -316,7 +316,8 @@ class Model:
                 len(dead_ids)
             )
             time.sleep(1)
-            self.view.update()
+            if self.flag_run:
+                self.view.update()
         else: # if cmdline
             print(f"Day {num_day}; "
                   f"Number new infected people: {number_new_infected_people}; "
