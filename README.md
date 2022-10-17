@@ -16,7 +16,10 @@ python -m app.main -c path_to_city_config -m path_to_model_config -v path_to_vir
 
 ### Usage GUI
 1) Put all parameters by writing boxes or loading parameters from config files
-2) Click button "Run!"
+2) Click button **Run!**
+3) If you want to stop execution of modelling then press button **Stop!**
+4) To clear cell with graph press button **Clear graph**
+5) To save config press button **Save config**
 
 ## Help
 Issues and question -> Telegram: IvanKozlov98 or this repository in section "Issues".
