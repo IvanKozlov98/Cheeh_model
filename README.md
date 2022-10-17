@@ -1,6 +1,8 @@
 # Cheeh model
 ## Installation
-Todo
+```sh
+pip install -r requirements.txt
+```
 
 ## Run
 ### Run GUI
