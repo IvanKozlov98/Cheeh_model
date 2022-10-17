@@ -20,16 +20,22 @@ class ModelStats:
         self.list_number_recovered_people = []
         self.list_number_all_infected_people = []
         self.list_dead_people = []
+        self.list_mean_specific_immunity = []
+        self.list_median_specific_immunity = []
 
     def add_values(self,
                    number_new_infected_people=None,
                    number_recovered_people=None,
                    number_all_infected_people=None,
-                   dead_people=None):
+                   dead_people=None,
+                   mean_specific_immunity=None,
+                   median_specific_immunity=None):
         add_if(self.list_number_new_infected_people, number_new_infected_people)
         add_if(self.list_number_recovered_people, number_recovered_people)
         add_if(self.list_number_all_infected_people, number_all_infected_people)
         add_if(self.list_dead_people, dead_people)
+        add_if(self.list_mean_specific_immunity, mean_specific_immunity)
+        add_if(self.list_median_specific_immunity, median_specific_immunity)
 
 
 class Model:
@@ -246,6 +252,13 @@ class Model:
                 self.people[person_id].static_contact_list = [(x, interaction) for (x, interaction) in
                                                               self.people[person_id].static_contact_list if x != dead_id]
 
+    def _get_mean_median_specific_immunity(self):
+        list_sp_im = []
+        for person in self.people.values():
+            list_sp_im.append(person.specific_immun)
+        list_sp_im = np.array(list_sp_im)
+        return np.mean(list_sp_im), np.median(list_sp_im)
+
     def _update_state_of_infected_people_step(self):
         """
         Update state of infected people
@@ -306,14 +319,16 @@ class Model:
         self.infected_people_ids.difference_update(recovered_people_ids)
         self.infected_people_ids.difference_update(dead_ids)
         number_all_infected_people = len(self.infected_people_ids)
-
+        mean_specific_immunity, median_specific_immunity = self._get_mean_median_specific_immunity()
 
         if self.gui:
             self.model_stats.add_values(
                 number_new_infected_people,
                 number_recovered_people,
                 number_all_infected_people,
-                len(dead_ids)
+                len(dead_ids),
+                mean_specific_immunity,
+                median_specific_immunity
             )
             time.sleep(1)
             if self.flag_run:
@@ -324,6 +339,8 @@ class Model:
                   f"Number recovered people: {number_recovered_people}; ", end='')
             print(f"Number all infected people: {number_all_infected_people}")
             print(f"Number dead people: {len(dead_ids)}")
+            print(f"Mean specific immunuty: {mean_specific_immunity}")
+            print(f"Median specific immunuty: {median_specific_immunity}")
 
     def get_model_stats(self):
         return self.model_stats

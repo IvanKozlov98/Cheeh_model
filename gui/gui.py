@@ -32,6 +32,7 @@ class GuiApp(tk.Tk):
         self.thread = None  # for run Model
         # gui parameters
         self.tab_epidemic = None
+        self.tab_specific_immunity = None
         ##
         self.virus_params = dict()
         self.city_params = dict()
@@ -81,28 +82,51 @@ class GuiApp(tk.Tk):
     def notify(self):
         ...
 
+
     def clear_graph(self):
-        self.figure = Figure(figsize=(5, 4), dpi=170)
-        self.plot = self.figure.add_subplot(1, 1, 1)
-        self.plot.plot([], [])
-        self.canvas = FigureCanvasTkAgg(self.figure, self.tab_epidemic)
-        self.canvas.get_tk_widget().grid(row=0, column=0)
-        self.figure.canvas.draw()
+        self.figure_epid = Figure(figsize=(5, 4), dpi=170)
+        self.plot_epid = self.figure_epid.add_subplot(1, 1, 1)
+        self.plot_epid.plot([], [])
+        self.canvas_epid = FigureCanvasTkAgg(self.figure_epid, self.tab_epidemic)
+        self.canvas_epid.get_tk_widget().grid(row=0, column=0)
+        self.figure_epid.canvas.draw()
+        #
+        self.figure_sp_im = Figure(figsize=(5, 4), dpi=170)
+        self.plot_sp_im = self.figure_sp_im.add_subplot(1, 1, 1)
+        self.plot_sp_im.plot([], [])
+        self.canvas_sp_im = FigureCanvasTkAgg(self.figure_sp_im, self.tab_specific_immunity)
+        self.canvas_sp_im.get_tk_widget().grid(row=0, column=0)
+        self.figure_sp_im.canvas.draw()
 
     def stop_program(self):
         self.controller.stop()
 
-    def update(self):
-        # self.figure = Figure(figsize=(5, 4), dpi=170)
-        # self.plot = self.figure.add_subplot(1, 1, 1)
+    def update_total_epidemic(self):
         times = np.arange(len(self.model.get_model_stats().list_number_new_infected_people))
-        self.plot.plot(times, self.model.get_model_stats().list_number_new_infected_people, label="number new infected people")
-        self.plot.plot(times, self.model.get_model_stats().list_number_recovered_people, label="number recovered people")
-        self.plot.plot(times, self.model.get_model_stats().list_number_all_infected_people, label="number all infected people")
-        self.plot.plot(times, self.model.get_model_stats().list_dead_people, label="number dead people")
-        self.canvas = FigureCanvasTkAgg(self.figure, self.tab_epidemic)
-        self.canvas.get_tk_widget().grid(row=0, column=0)
-        self.figure.canvas.draw()
+        self.plot_epid.plot(times, self.model.get_model_stats().list_number_new_infected_people,
+                       label="number new infected people")
+        self.plot_epid.plot(times, self.model.get_model_stats().list_number_recovered_people,
+                       label="number recovered people")
+        self.plot_epid.plot(times, self.model.get_model_stats().list_number_all_infected_people,
+                       label="number all infected people")
+        self.plot_epid.plot(times, self.model.get_model_stats().list_dead_people, label="number dead people")
+        self.canvas_epid = FigureCanvasTkAgg(self.figure_epid, self.tab_epidemic)
+        self.canvas_epid.get_tk_widget().grid(row=0, column=0)
+        self.figure_epid.canvas.draw()
+
+    def update_specific_immunity_graph(self):
+        times = np.arange(len(self.model.get_model_stats().list_mean_specific_immunity))
+        self.plot_sp_im.plot(times, self.model.get_model_stats().list_mean_specific_immunity,
+                       label="mean specific immunity")
+        self.plot_sp_im.plot(times, self.model.get_model_stats().list_median_specific_immunity,
+                       label="median specific immunity")
+        self.canvas_sp_im = FigureCanvasTkAgg(self.figure_sp_im, self.tab_specific_immunity)
+        self.canvas_sp_im.get_tk_widget().grid(row=0, column=0)
+        self.figure_sp_im.canvas.draw()
+
+    def update(self):
+        self.update_total_epidemic()
+        self.update_specific_immunity_graph()
 
 
     def validate_params(self):
@@ -250,20 +274,26 @@ class GuiApp(tk.Tk):
 
         self.tab_control_vis = ttk.Notebook(self.frame2)
         self.tab_epidemic = ttk.Frame(self.tab_control_vis)
-        self.tab2_ = ttk.Frame(self.tab_control_vis)
+        self.tab_specific_immunity = ttk.Frame(self.tab_control_vis)
         self.tab3_ = ttk.Frame(self.tab_control_vis)
         self.tab_control_vis.add(self.tab_epidemic, text='Epidemic dynamic')
-        self.tab_control_vis.add(self.tab2_, text='Todo1')
-        self.tab_control_vis.add(self.tab3_, text='Todo2')
+        self.tab_control_vis.add(self.tab_specific_immunity, text='Specific immunity')
+        self.tab_control_vis.add(self.tab3_, text='Todo')
 
         self.tab_control_vis.pack(expand=1, fill='both')
         #########################################
-
-        self.figure = Figure(figsize=(5, 4), dpi=170)
-        self.plot = self.figure.add_subplot(1, 1, 1)
-        self.plot.plot([], [], color="blue", marker="x", linestyle="")
-        self.canvas = FigureCanvasTkAgg(self.figure, self.tab_epidemic)
-        self.canvas.get_tk_widget().grid(row=0, column=0)
+        # first tab
+        self.figure_epid = Figure(figsize=(5, 4), dpi=170)
+        self.plot_epid = self.figure_epid.add_subplot(1, 1, 1)
+        self.plot_epid.plot([], [], color="blue", marker="x", linestyle="")
+        self.canvas_epid = FigureCanvasTkAgg(self.figure_epid, self.tab_epidemic)
+        self.canvas_epid.get_tk_widget().grid(row=0, column=0)
+        # second tab
+        self.figure_sp_im = Figure(figsize=(5, 4), dpi=170)
+        self.plot_sp_im = self.figure_sp_im.add_subplot(1, 1, 1)
+        self.plot_sp_im.plot([], [], color="blue", marker="x", linestyle="")
+        self.canvas_sp_im = FigureCanvasTkAgg(self.figure_sp_im, self.tab_specific_immunity)
+        self.canvas_sp_im.get_tk_widget().grid(row=0, column=0)
 
         #########################################
 
