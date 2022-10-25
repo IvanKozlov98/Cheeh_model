@@ -270,10 +270,10 @@ class GuiApp(tk.Tk):
         self.spread_rate = self._create_spin(tab2, "Spread rate", 0, 8, string_var=self.spread_rate_var)
 
         self.lag_w = self._create_spin(tab2, "Lag", 0, 10, string_var=self.lag_w_var)
-        self.lag_w = self._create_spin(tab2, "Non specific immunity mean", 0, 10, string_var=self.non_specific_immun_mean_var)
-        self.lag_w = self._create_spin(tab2, "Non specific immunity sigma", 0, 12, string_var=self.non_specific_immun_sigma_var)
-        self.lag_w = self._create_spin(tab2, "Specific immunity mean", 0, 14, string_var=self.specific_immun_mean_var)
-        self.lag_w = self._create_spin(tab2, "Specific immunity sigma", 0, 16, string_var=self.specific_immun_sigma_var)
+        self.non_specific_immun_mean = self._create_spin(tab2, "Non specific immunity mean", 0, 10, string_var=self.non_specific_immun_mean_var)
+        self.non_specific_immun_sigma = self._create_spin(tab2, "Non specific immunity sigma", 0, 12, string_var=self.non_specific_immun_sigma_var)
+        self.specific_immun_mean = self._create_spin(tab2, "Specific immunity mean", 0, 14, string_var=self.specific_immun_mean_var)
+        self.specific_immun_sigma = self._create_spin(tab2, "Specific immunity sigma", 0, 16, string_var=self.specific_immun_sigma_var)
 
         # City
         label3 = Label(tab3, image=bg)

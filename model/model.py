@@ -66,13 +66,13 @@ class Model:
     #             self.viral_load_traces[i, j] = viral_load_trace
     #             self.specific_immunity_traces[i, j] = specific_immunity_trace
 
-    def make_person_infected(self, person_id, viral_load=800):
+    def make_person_infected(self, person_id, viral_load=100):
         person = self.people[person_id]
         person.state = 'infected'
-        person.viral_load = viral_load  # TODO (IvanKozlov98)
-        person.a_id = int(min(round(person.treatment_rate * Model.TRACES_COUNT_A), Model.TRACES_COUNT_A - 1))
-        person.b_id = int(min(round((person.start_treatment_time - 1) * Model.TRACES_COUNT_B / 10.0),
-                          Model.TRACES_COUNT_B - 1))
+        person.viral_load[-1] = viral_load  # TODO (IvanKozlov98)
+        # person.a_id = int(min(round(person.treatment_rate * Model.TRACES_COUNT_A), Model.TRACES_COUNT_A - 1))
+        # person.b_id = int(min(round((person.start_treatment_time - 1) * Model.TRACES_COUNT_B / 10.0),
+        #                   Model.TRACES_COUNT_B - 1))
 
     def _init_random_starting_infected_people(self, initial_infected_people_count):
         self.infected_people_ids = set(
@@ -126,13 +126,11 @@ class Model:
         # init city
         location = Location(config_cities, use_cache=use_cache_population, cache_file=cache_file_population)
         self.people = location.get_population()
-        specific_immun_mean = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'SPECIFIC_IMMUN_MEAN'))
-        specific_immun_sigma = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'SPECIFIC_IMMUN_SIGMA'))
-
-        non_specific_immun_mean = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'NON_SPECIFIC_IMMUN_MEAN'))
-        non_specific_immun_sigma = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'NON_SPECIFIC_IMMUN_SIGMA'))
-
-        lag_specific_immun = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'LAG'))
+        specific_immun_mean = float(get_value_from_config(config_virus, Virus._SECTION_CONFIG, 'SPECIFIC_IMMUN_MEAN'))
+        specific_immun_sigma = float(get_value_from_config(config_virus, Virus._SECTION_CONFIG, 'SPECIFIC_IMMUN_SIGMA'))
+        non_specific_immun_mean = float(get_value_from_config(config_virus, Virus._SECTION_CONFIG, 'NON_SPECIFIC_IMMUN_MEAN'))
+        non_specific_immun_sigma = float(get_value_from_config(config_virus, Virus._SECTION_CONFIG, 'NON_SPECIFIC_IMMUN_SIGMA'))
+        lag_specific_immun = float(get_value_from_config(config_virus, Virus._SECTION_CONFIG, 'LAG'))
 
         Model._init_specific_immunity(specific_immun_mean, specific_immun_sigma, self.people)
         Model._init_non_specific_immunity(non_specific_immun_mean, non_specific_immun_sigma, self.people)
@@ -159,6 +157,7 @@ class Model:
         self.ind_random_contacts = 0
         # init variables for immunity traces
         # self.init_traces()
+        self.R = (self.VIR_LOAD_THRESHOLD + self.DEAD_THRESHOLD) / 2
 
 
     def _get_new_random_contacts(self):
@@ -185,11 +184,11 @@ class Model:
         :return: is other person became or not infected
         """
         # TODO(IvanKozlov98) write more complex formula than that
-        giving_viral_load = interaction.degree * (infected_person.viral_load / 610) * (1 - contact_person.specific_immun)
+        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / self.R) * (1 - contact_person.specific_immun)
         # update virus load of contact person
-        contact_person.viral_load += giving_viral_load
+        contact_person.viral_load[-1] += giving_viral_load
         # update state of contact person if needed
-        if contact_person.viral_load >= self.VIR_LOAD_THRESHOLD and contact_person.state == "healthy":
+        if contact_person.viral_load[-1] >= self.VIR_LOAD_THRESHOLD and contact_person.state == "healthy":
             self.make_person_infected(contact_person.id)
             return True
         return False
@@ -233,22 +232,22 @@ class Model:
                 person.viral_load[0] * person.alpha + person.specific_immun)
 
     def _is_mild_infected(self, person):
-        return in_range(self.MILD_THRESHOLD, person.viral_load, self.SEVERE_THRESHOLD)
+        return in_range(self.MILD_THRESHOLD, person.viral_load[-1], self.SEVERE_THRESHOLD)
 
     def _is_severe_infected(self, person):
-        return in_range(self.MILD_THRESHOLD, person.viral_load, 1000000)
+        return in_range(self.MILD_THRESHOLD, person.viral_load[-1], 1000000)
 
     def _is_infected(self, person):
-        return person.viral_load >= self.VIR_LOAD_THRESHOLD
+        return person.viral_load[-1] >= self.VIR_LOAD_THRESHOLD
 
     @staticmethod
     def _is_recovered(person):
-        return person.viral_load < 5
+        return person.viral_load[-1] < 5
 
     def _recovery_non_infected_people_step(self):
         for person in self.people.values():
             if person.state == "healthy":
-                person.viral_load = 0
+                person.viral_load[-1] = 0
 
     @staticmethod
     def _get_contact_list_mild(person):
@@ -303,7 +302,7 @@ class Model:
             # update time in infected state
             infected_person.time_in_infected_state += 1
             # update state of the infected person
-            if infected_person.viral_load > self.DEAD_THRESHOLD:
+            if infected_person.viral_load[-1] > self.DEAD_THRESHOLD:
                 dead_ids.append(infected_person_id)
             elif infected_person.state == 'infected' and self._is_mild_infected(infected_person):
                 infected_person.state = 'mild'

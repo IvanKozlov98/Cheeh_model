@@ -9,10 +9,10 @@ import numpy.random as nprnd
 class BuilderCity:
 
     # TODO(IvanKozlov98) move to another place
-    PARENT_CHILD_INTERACTION = Interaction(type_interaction="Home", degree=170)
-    PAIR_INTERACTION = Interaction(type_interaction="Home", degree=1000)
-    SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=180)
-    BIG_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=30)
+    PARENT_CHILD_INTERACTION = Interaction(type_interaction="Home", degree=50)
+    PAIR_INTERACTION = Interaction(type_interaction="Home", degree=80)
+    SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=30)
+    BIG_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=10)
 
     # _EARLIER_AGE_BEAR = 18
     # _LATE_AGE_BEAR = 35
@@ -113,7 +113,7 @@ class BuilderCity:
 
         :return: dict of people with static contacts {people_id -> people}
         """
-        Person.static_init()
+        # Person.static_init()
         np.random.seed(42)
         # 1 step: create man and woman with given age
         man_count = round(population_count * 0.45)
