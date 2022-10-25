@@ -25,7 +25,7 @@ class GuiApp(tk.Tk):
     def __init__(self, controller):
         super(GuiApp, self).__init__()
         #
-        self.HEIGHT = 700
+        self.HEIGHT = 800
         self.WIDTH = 1200
         self.controller = controller
         self.model = None
@@ -38,14 +38,17 @@ class GuiApp(tk.Tk):
         self.city_params = dict()
         self.model_params = dict()
 
-        self.mild_thr = None
+        self.lag_w = None
+        self.non_specific_immun_mean = None
+        self.non_specific_immun_sigma = None
+        self.specific_immun_mean = None
+        self.specific_immun_sigma = None
+        self.spread_rate = None
+
         self.start_thr = None
+        self.mild_thr = None
         self.severe_thr = None
         self.dead_thr = None
-        self.spread_rate = None
-        self.heavy_mort_rate = None
-        self.mild_mort_rate = None
-        self.initial_infected_people_count = None
 
         ###############
         self.population_count = None
@@ -53,6 +56,7 @@ class GuiApp(tk.Tk):
 
         ###############
 
+        self.initial_infected_people_count = None
         self.days_count = None
 
         self.initialize()
@@ -139,13 +143,18 @@ class GuiApp(tk.Tk):
 
     def get_virus_params(self):
         virus_params = dict()
+
+        virus_params["LAG"] = self.lag_w.get()
+        virus_params["NON_SPECIFIC_IMMUN_MEAN"] = self.non_specific_immun_mean.get()
+        virus_params["NON_SPECIFIC_IMMUN_SIGMA"] = self.non_specific_immun_sigma.get()
+        virus_params["SPECIFIC_IMMUN_MEAN"] = self.specific_immun_mean.get()
+        virus_params["SPECIFIC_IMMUN_SIGMA"] = self.specific_immun_sigma.get()
+
         virus_params["VIR_LOAD_THRESHOLD"] = self.start_thr.get()
         virus_params["MILD_THRESHOLD"] = self.mild_thr.get()
         virus_params["SEVERE_THRESHOLD"] = self.severe_thr.get()
         virus_params["DEAD_THRESHOLD"] = self.dead_thr.get()
         virus_params["SPREAD_RATE"] = self.spread_rate.get()
-        virus_params["HEAVY_MORT_RATE"] = self.heavy_mort_rate.get()
-        virus_params["MILD_MORT_RATE"] = self.mild_mort_rate.get()
         return virus_params
 
     def get_city_params(self):
@@ -233,13 +242,17 @@ class GuiApp(tk.Tk):
         label2 = Label(tab2, image=bg)
         label2.place(x=0, y=0)
 
+        self.lag_w_var = StringVar()
+        self.non_specific_immun_mean_var = StringVar()
+        self.non_specific_immun_sigma_var = StringVar()
+        self.specific_immun_mean_var = StringVar()
+        self.specific_immun_sigma_var = StringVar()
+
         self.start_thr_var = StringVar()
         self.mild_thr_var = StringVar()
         self.severe_thr_var = StringVar()
         self.dead_thr_var = StringVar()
         self.spread_rate_var = StringVar()
-        self.heavy_mort_rate_var = StringVar()
-        self.mild_mort_rate_var = StringVar()
 
         # scrollbar = Scrollbar(tab2)
         # scrollbar.pack(side=RIGHT, fill=Y)
@@ -255,8 +268,12 @@ class GuiApp(tk.Tk):
         self.severe_thr = self._create_spin(tab2, "Severe threshold", 0, 4, string_var=self.severe_thr_var)
         self.dead_thr = self._create_spin(tab2, "Dead threshold", 0, 6, string_var=self.dead_thr_var)
         self.spread_rate = self._create_spin(tab2, "Spread rate", 0, 8, string_var=self.spread_rate_var)
-        self.heavy_mort_rate = self._create_spin(tab2, "Heavy mortality rate", 0, 10, string_var=self.heavy_mort_rate_var)
-        self.mild_mort_rate = self._create_spin(tab2, "Mild mortality rate", 0, 12, string_var=self.mild_mort_rate_var)
+
+        self.lag_w = self._create_spin(tab2, "Lag", 0, 10, string_var=self.lag_w_var)
+        self.lag_w = self._create_spin(tab2, "Non specific immunity mean", 0, 10, string_var=self.non_specific_immun_mean_var)
+        self.lag_w = self._create_spin(tab2, "Non specific immunity sigma", 0, 12, string_var=self.non_specific_immun_sigma_var)
+        self.lag_w = self._create_spin(tab2, "Specific immunity mean", 0, 14, string_var=self.specific_immun_mean_var)
+        self.lag_w = self._create_spin(tab2, "Specific immunity sigma", 0, 16, string_var=self.specific_immun_sigma_var)
 
         # City
         label3 = Label(tab3, image=bg)
@@ -335,13 +352,17 @@ class GuiApp(tk.Tk):
             self.days_count_var.set(get_value_from_config(file, "Model", "DAYS_COUNT"))
 
         def load_virus_config_impl(file):
+            self.lag_w_var.set(get_value_from_config(file, "Virus", "LAG"))
+            self.non_specific_immun_mean_var.set(get_value_from_config(file, "Virus", "NON_SPECIFIC_IMMUN_MEAN"))
+            self.non_specific_immun_sigma_var.set(get_value_from_config(file, "Virus", "NON_SPECIFIC_IMMUN_SIGMA"))
+            self.specific_immun_mean_var.set(get_value_from_config(file, "Virus", "SPECIFIC_IMMUN_MEAN"))
+            self.specific_immun_sigma_var.set(get_value_from_config(file, "Virus", "SPECIFIC_IMMUN_SIGMA"))
+
             self.start_thr_var.set(get_value_from_config(file, "Virus", "VIR_LOAD_THRESHOLD"))
             self.mild_thr_var.set(get_value_from_config(file, "Virus", "MILD_THRESHOLD"))
             self.severe_thr_var.set(get_value_from_config(file, "Virus", "SEVERE_THRESHOLD"))
             self.dead_thr_var.set(get_value_from_config(file, "Virus", "DEAD_THRESHOLD"))
             self.spread_rate_var.set(get_value_from_config(file, "Virus", "SPREAD_RATE"))
-            self.heavy_mort_rate_var.set(get_value_from_config(file, "Virus", "HEAVY_MORT_RATE"))
-            self.mild_mort_rate_var.set(get_value_from_config(file, "Virus", "MILD_MORT_RATE"))
 
 
         def load_model_config():

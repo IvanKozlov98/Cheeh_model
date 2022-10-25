@@ -1,6 +1,11 @@
 import configparser
 
 
+def get_alpha_beta(mu, sigma):
+    alpha = mu**2 * ((1 - mu) / sigma**2 - 1 / mu)
+    beta = alpha * (1 / mu - 1)
+    return alpha, beta
+
 def get_value_from_config(origin, section, key):
     if isinstance(origin, str):
         config = configparser.ConfigParser()

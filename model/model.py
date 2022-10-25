@@ -7,7 +7,7 @@ from virus.virus import Virus
 
 import numpy as np
 import numpy.random as nprnd
-import matplotlib.pyplot as plt
+from scipy.stats import beta
 
 
 def add_if(xs, x):
@@ -45,26 +45,26 @@ class Model:
     TRACES_COUNT_B = 1000
     MAX_TIME_INFECTED = 40
 
-    def init_traces(self):
-        """
-        Initiation viral and specific immunity traces
-        """
-        self.viral_load_traces = np.zeros(shape=(Model.TRACES_COUNT_A, Model.TRACES_COUNT_B, Model.MAX_TIME_INFECTED))
-        self.specific_immunity_traces = np.zeros(
-            shape=(Model.TRACES_COUNT_A, Model.TRACES_COUNT_B, Model.MAX_TIME_INFECTED))
-        for (i, a) in enumerate(np.linspace(-0.9, -0.1, Model.TRACES_COUNT_A)):
-            for (j, b) in enumerate(np.linspace(1, 10, Model.TRACES_COUNT_B)):
-                specific_immunity_trace = np.array(
-                    [1 / (1 + np.exp(a * x + b)) for x in range(Model.MAX_TIME_INFECTED)])
-                viral_load_trace = np.zeros(Model.MAX_TIME_INFECTED)
-                alpha = 0.3
-                viral_load_trace[0] = 800  # TODO (IvanKozlov98) maybe save viral load given person
-                for t in range(1, Model.MAX_TIME_INFECTED):
-                    viral_load_trace[t] = (viral_load_trace[t - 1] +
-                                           alpha * viral_load_trace[t - 1] * self.virus.spread_rate[t]
-                                           ) * (1 - specific_immunity_trace[t])
-                self.viral_load_traces[i, j] = viral_load_trace
-                self.specific_immunity_traces[i, j] = specific_immunity_trace
+    # def init_traces(self):
+    #     """
+    #     Initiation viral and specific immunity traces
+    #     """
+    #     self.viral_load_traces = np.zeros(shape=(Model.TRACES_COUNT_A, Model.TRACES_COUNT_B, Model.MAX_TIME_INFECTED))
+    #     self.specific_immunity_traces = np.zeros(
+    #         shape=(Model.TRACES_COUNT_A, Model.TRACES_COUNT_B, Model.MAX_TIME_INFECTED))
+    #     for (i, a) in enumerate(np.linspace(-0.9, -0.1, Model.TRACES_COUNT_A)):
+    #         for (j, b) in enumerate(np.linspace(1, 10, Model.TRACES_COUNT_B)):
+    #             specific_immunity_trace = np.array(
+    #                 [1 / (1 + np.exp(a * x + b)) for x in range(Model.MAX_TIME_INFECTED)])
+    #             viral_load_trace = np.zeros(Model.MAX_TIME_INFECTED)
+    #             alpha = 0.3
+    #             viral_load_trace[0] = 800  # TODO (IvanKozlov98) maybe save viral load given person
+    #             for t in range(1, Model.MAX_TIME_INFECTED):
+    #                 viral_load_trace[t] = (viral_load_trace[t - 1] +
+    #                                        alpha * viral_load_trace[t - 1] * self.virus.spread_rate[t]
+    #                                        ) * (1 - specific_immunity_trace[t])
+    #             self.viral_load_traces[i, j] = viral_load_trace
+    #             self.specific_immunity_traces[i, j] = specific_immunity_trace
 
     def make_person_infected(self, person_id, viral_load=800):
         person = self.people[person_id]
@@ -80,6 +80,28 @@ class Model:
         for infected_person_id in self.infected_people_ids:
             self.make_person_infected(infected_person_id, nprnd.randint(self.VIR_LOAD_THRESHOLD, self.SEVERE_THRESHOLD))
 
+    @staticmethod
+    def _init_specific_immunity(mean, sigma, people):
+        norm_alfa_coef = 1000
+        people_count = len(people)
+        a, b = get_alpha_beta(mean, sigma)
+        specific_immunity_rv = np.array(beta.rvs(size=people_count, a=a, b=b)) / norm_alfa_coef
+        for (i, person_id) in enumerate(people.keys()):
+            people[person_id].alpha = specific_immunity_rv[i]
+
+    @staticmethod
+    def _init_non_specific_immunity(mean, sigma, people):
+        people_count = len(people)
+        a, b = get_alpha_beta(mean, sigma)
+        non_specific_immunity_rv = np.array(beta.rvs(size=people_count, a=a, b=b))
+        for (i, person_id) in enumerate(people.keys()):
+            people[person_id].non_specific_immun = non_specific_immunity_rv[i]
+
+    @staticmethod
+    def _init_lag(lag, people):
+        for person_id in people.keys():
+            people[person_id].lag_specific_immun = lag
+
     def __init__(self,
                  config_model,
                  config_virus,
@@ -88,7 +110,6 @@ class Model:
                  cache_file_population=True,
                  gui=False):
         """
-
         :param config_model: dict or file with config
         :param config_virus: dict or file with config
         :param config_cities: dict or file with config
@@ -105,6 +126,17 @@ class Model:
         # init city
         location = Location(config_cities, use_cache=use_cache_population, cache_file=cache_file_population)
         self.people = location.get_population()
+        specific_immun_mean = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'SPECIFIC_IMMUN_MEAN'))
+        specific_immun_sigma = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'SPECIFIC_IMMUN_SIGMA'))
+
+        non_specific_immun_mean = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'NON_SPECIFIC_IMMUN_MEAN'))
+        non_specific_immun_sigma = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'NON_SPECIFIC_IMMUN_SIGMA'))
+
+        lag_specific_immun = int(get_value_from_config(config_model, Virus._SECTION_CONFIG, 'LAG'))
+
+        Model._init_specific_immunity(specific_immun_mean, specific_immun_sigma, self.people)
+        Model._init_non_specific_immunity(non_specific_immun_mean, non_specific_immun_sigma, self.people)
+        Model._init_lag(lag_specific_immun, self.people)
         # init virus
         self.virus = Virus(config_virus)
         # init model parameters
@@ -126,7 +158,8 @@ class Model:
                                                 self.DAYS_COUNT * self.MAX_NUMBER_RANDOM_CONTACTS * len(self.people) // 2)
         self.ind_random_contacts = 0
         # init variables for immunity traces
-        self.init_traces()
+        # self.init_traces()
+
 
     def _get_new_random_contacts(self):
         new_random_contacts_count = self.number_random_contacts[self.ind_number_random_contacts]
@@ -183,31 +216,21 @@ class Model:
 
         return new_infected_ids
 
-    # @staticmethod
-    # def _update_viral_load(person):
-    #     cur_viral_load = person.viral_load[-1]
-    #     cur_viral_load *= Virus.spread_rate
-    #     cur_viral_load *= (1 - person.specific_immun)
-    #     cur_viral_load *= (1.2 - person.non_specific_immun)
-    #     # update value
-    #     person.viral_load.append(cur_viral_load)
-    #     if len(person.viral_load) > 5:
-    #         person.viral_load.popleft()
 
-    # @staticmethod
-    # def ff(prev_viral_load, alpha, prev_specific_immun, time):
-    #     return alpha * (1 - prev_specific_immun) * (1 / (time + 1))
+    def _update_viral_load(self, person):
+        cur_viral_load = person.viral_load[-1]
+        cur_viral_load *= (1 + self.virus.spread_rate)
+        cur_viral_load *= (1 - (person.specific_immun / 1.57079632679))
+        cur_viral_load *= (1 - person.non_specific_immun)
+        # update value
+        person.viral_load.append(cur_viral_load)
+        if len(person.viral_load) > person.lag_specific_immun:
+            person.viral_load.popleft()
 
-    # def _update_specific_immun(self, person):
-    #     # prev_specific_immun = person.specific_immun
-    #     # person.specific_immun = min(1, prev_specific_immun +
-    #     #                             Model.ff(person.viral_load[0],
-    #     #                                      0.6,
-    #     #                                      prev_specific_immun,
-    #     #                                      person.time_in_infected_state)
-    #     #                             )
-    #     person.recovering_time = min(19, person.recovering_time + person.recovering_rate)
-    #     person.specific_immun = self.trace_specific_immun[person.recovering_time]
+    def _update_specific_immun(self, person):
+        if person.time_in_infected_state > person.lag_specific_immun:
+            person.specific_immun = np.arctan(
+                person.viral_load[0] * person.alpha + person.specific_immun)
 
     def _is_mild_infected(self, person):
         return in_range(self.MILD_THRESHOLD, person.viral_load, self.SEVERE_THRESHOLD)
@@ -270,12 +293,12 @@ class Model:
         for infected_person_id in self.infected_people_ids:
             infected_person = self.people[infected_person_id]
             # update different parameters
-            infected_person.viral_load = self.viral_load_traces[infected_person.a_id, infected_person.b_id][
-                infected_person.time_in_infected_state]
-            infected_person.specific_immun = self.specific_immunity_traces[infected_person.a_id, infected_person.b_id][
-                infected_person.time_in_infected_state]
-            # Model._update_viral_load(infected_person)
-            # self._update_specific_immun(infected_person)
+            # infected_person.viral_load = self.viral_load_traces[infected_person.a_id, infected_person.b_id][
+            #     infected_person.time_in_infected_state]
+            # infected_person.specific_immun = self.specific_immunity_traces[infected_person.a_id, infected_person.b_id][
+            #     infected_person.time_in_infected_state]
+            self._update_specific_immun(infected_person)
+            self._update_viral_load(infected_person)
             # Model._update_non_specific_immun(infected_person)
             # update time in infected state
             infected_person.time_in_infected_state += 1
