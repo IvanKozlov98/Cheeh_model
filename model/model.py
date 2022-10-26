@@ -181,9 +181,6 @@ class Model:
         for person in self.people.values():
             people_by_age_dict[person.age] += 1
 
-        for (age, cnt) in people_by_age_dict.items():
-            print(f"Age {age}: Count {cnt}")
-
         prob_sym_dict, prob_mild_dict, prob_severe_dict, prob_dead_dict = Model.get_probs_tr()
         solve_prob_sym_dict = dict()
         solve_prob_mild_dict = dict()
