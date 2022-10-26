@@ -188,10 +188,10 @@ class Model:
         solve_prob_dead_dict = dict()
 
         for (age, cnt) in people_by_age_dict.items():
-            solve_prob_sym_dict[age] = np.random.choice(2, size=self.DAYS_COUNT * cnt, p=[prob_sym_dict[age], 1 - prob_sym_dict[age]])
-            solve_prob_mild_dict[age] = np.random.choice(2, size=cnt, p=[prob_mild_dict[age], 1 - prob_mild_dict[age]])
-            solve_prob_severe_dict[age] = np.random.choice(2, size=cnt, p=[prob_severe_dict[age], 1 - prob_severe_dict[age]])
-            solve_prob_dead_dict[age] = np.random.choice(2, size=cnt, p=[prob_dead_dict[age], 1 - prob_dead_dict[age]])
+            solve_prob_sym_dict[age] = np.random.choice(2, size=self.DAYS_COUNT * cnt, p=[1 - prob_sym_dict[age], prob_sym_dict[age]])
+            solve_prob_mild_dict[age] = np.random.choice(2, size=cnt, p=[1 - prob_mild_dict[age], prob_mild_dict[age]])
+            solve_prob_severe_dict[age] = np.random.choice(2, size=cnt, p=[1 - prob_severe_dict[age], prob_severe_dict[age]])
+            solve_prob_dead_dict[age] = np.random.choice(2, size=cnt, p=[1 - prob_dead_dict[age], prob_dead_dict[age]])
 
         self.solve_prob_sym = Box(solve_prob_sym_dict)
         self.solve_prob_mild = Box(solve_prob_mild_dict)
