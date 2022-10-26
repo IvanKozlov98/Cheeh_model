@@ -80,7 +80,7 @@ class Model:
     #             self.viral_load_traces[i, j] = viral_load_trace
     #             self.specific_immunity_traces[i, j] = specific_immunity_trace
 
-    def make_person_infected(self, person_id, viral_load=100):
+    def make_person_infected(self, person_id, viral_load):
         person = self.people[person_id]
         person.state = 'infected'
         person.viral_load[-1] = viral_load  # TODO (IvanKozlov98)
@@ -287,10 +287,10 @@ class Model:
         contact_person.viral_load[-1] += giving_viral_load
         # update state of contact person if needed
         if contact_person.viral_load[-1] >= self.VIR_LOAD_THRESHOLD and contact_person.state == "healthy" and (not contact_person.flag_check_infected):
-            if self.solve_prob_sym.next(contact_person.age):
-                self.make_person_infected(contact_person.id)
             contact_person.flag_check_infected = True
-            return True
+            if self.solve_prob_sym.next(contact_person.age):
+                self.make_person_infected(contact_person.id, self.VIR_LOAD_THRESHOLD)
+                return True
         return False
 
     def stop_running(self):
