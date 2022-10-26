@@ -157,7 +157,7 @@ class Model:
         self.ind_random_contacts = 0
         # init variables for immunity traces
         # self.init_traces()
-        self.R = self.VIR_LOAD_THRESHOLD / 1.5
+        self.R = self.VIR_LOAD_THRESHOLD / 1.3
 
 
     def _get_new_random_contacts(self):
