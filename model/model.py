@@ -12,7 +12,10 @@ from scipy.stats import beta
 
 def add_if(xs, x):
     if x is not None:
-        xs.append(x)
+        if x == 0:
+            xs.append(x + 1)
+        else:
+            xs.append(x)
 
 class ModelStats:
     def __init__(self):
@@ -22,6 +25,7 @@ class ModelStats:
         self.list_dead_people = []
         self.list_mean_specific_immunity = []
         self.list_median_specific_immunity = []
+
 
     def add_values(self,
                    number_new_infected_people=None,

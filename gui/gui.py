@@ -59,6 +59,7 @@ class GuiApp(tk.Tk):
         self.initial_infected_people_count = None
         self.days_count = None
 
+        self.is_log = False
         self.initialize()
 
     @staticmethod
@@ -112,23 +113,38 @@ class GuiApp(tk.Tk):
 
     def update_total_epidemic(self):
         times = np.arange(len(self.model.get_model_stats().list_number_new_infected_people))
-        self.plot_epid.plot(times, self.model.get_model_stats().list_number_new_infected_people,
-                            color="blue", label="number new infected people")
-        self.plot_epid.plot(times, self.model.get_model_stats().list_number_recovered_people,
-                            color="orange", label="number recovered people")
-        self.plot_epid.plot(times, self.model.get_model_stats().list_number_all_infected_people,
-                            color="green", label="number all infected people")
-        self.plot_epid.plot(times, self.model.get_model_stats().list_dead_people, color="red", label="number dead people")
+        if self.is_log:
+            self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_new_infected_people),
+                                color="blue", label="number new infected people")
+            self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_recovered_people),
+                                color="orange", label="number recovered people")
+            self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_all_infected_people),
+                                color="green", label="number all infected people")
+            self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_dead_people), color="red", label="number dead people")
+        else:
+            self.plot_epid.plot(times, self.model.get_model_stats().list_number_new_infected_people,
+                                color="blue", label="number new infected people")
+            self.plot_epid.plot(times, self.model.get_model_stats().list_number_recovered_people,
+                                color="orange", label="number recovered people")
+            self.plot_epid.plot(times, self.model.get_model_stats().list_number_all_infected_people,
+                                color="green", label="number all infected people")
+            self.plot_epid.plot(times, self.model.get_model_stats().list_dead_people, color="red", label="number dead people")
         self.canvas_epid = FigureCanvasTkAgg(self.figure_epid, self.tab_epidemic)
         self.canvas_epid.get_tk_widget().grid(row=0, column=0)
         self.figure_epid.canvas.draw()
 
     def update_specific_immunity_graph(self):
         times = np.arange(len(self.model.get_model_stats().list_mean_specific_immunity))
-        self.plot_sp_im.plot(times, self.model.get_model_stats().list_mean_specific_immunity,
-                       color="orange", label="mean specific immunity")
-        self.plot_sp_im.plot(times, self.model.get_model_stats().list_median_specific_immunity,
-                       color="green", label="median specific immunity")
+        if self.is_log:
+            self.plot_sp_im.plot(times, np.log(self.model.get_model_stats().list_mean_specific_immunity),
+                           color="orange", label="mean specific immunity")
+            self.plot_sp_im.plot(times, np.log(self.model.get_model_stats().list_median_specific_immunity),
+                           color="green", label="median specific immunity")
+        else:
+            self.plot_sp_im.plot(times, self.model.get_model_stats().list_mean_specific_immunity,
+                                 color="orange", label="mean specific immunity")
+            self.plot_sp_im.plot(times, self.model.get_model_stats().list_median_specific_immunity,
+                                 color="green", label="median specific immunity")
         self.canvas_sp_im = FigureCanvasTkAgg(self.figure_sp_im, self.tab_specific_immunity)
         self.canvas_sp_im.get_tk_widget().grid(row=0, column=0)
         self.figure_sp_im.canvas.draw()
@@ -321,6 +337,18 @@ class GuiApp(tk.Tk):
         self.canvas_sp_im = FigureCanvasTkAgg(self.figure_sp_im, self.tab_specific_immunity)
         self.canvas_sp_im.get_tk_widget().grid(row=0, column=0)
 
+        #############
+        log_var = BooleanVar()
+        def change_y_axis():
+            self.is_log = log_var.get()
+            self.clear_graph()
+            self.update()
+        log_var.set(False)
+        c1 = Checkbutton(self.frame2, text="Log",
+                         variable=log_var,
+                         onvalue=1, offvalue=0,
+                         command=change_y_axis)
+        c1.pack(anchor=W, padx=10)
 
         #########################################
 
