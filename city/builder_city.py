@@ -3,6 +3,7 @@ from model.person import Person
 from model.interaction import Interaction
 
 import numpy as np
+import pandas as pd
 import numpy.random as nprnd
 
 
@@ -30,10 +31,8 @@ class BuilderCity:
         return people
 
     @staticmethod
-    def get_man_age_distribution(n):
-        dist = np.array(list(map(int, nprnd.lognormal(3, 1, n))))
-        dist[dist >= 100] = 99
-        return dist
+    def get_man_age_distribution(n, dist):
+        return np.random.choice(100, size=n, p=np.array(dist / np.sum(dist)))
 
     @staticmethod
     def get_woman_age_distribution(n):
@@ -116,11 +115,16 @@ class BuilderCity:
         # Person.static_init()
         np.random.seed(42)
         # 1 step: create man and woman with given age
-        man_count = round(population_count * 0.45)
+        data_age_gender = pd.read_csv('city/age_gender_russia.csv')
+        male_age = np.array(data_age_gender['Male']).astype(int)
+        female_age = np.array(data_age_gender['Female']).astype(int)
+        man_ratio = np.sum(male_age) / (np.sum(male_age) + np.sum(female_age))
+
+        man_count = round(population_count * man_ratio)
         woman_count = population_count - man_count
 
-        man = BuilderCity.get_people(BuilderCity.get_man_age_distribution(man_count), 'm')
-        woman = BuilderCity.get_people(BuilderCity.get_man_age_distribution(woman_count), 'w')
+        man = BuilderCity.get_people(BuilderCity.get_man_age_distribution(man_count, male_age), 'm')
+        woman = BuilderCity.get_people(BuilderCity.get_man_age_distribution(woman_count, female_age), 'w')
 
         people = dict()
         people.update(man)

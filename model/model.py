@@ -42,6 +42,16 @@ class ModelStats:
         add_if(self.list_median_specific_immunity, median_specific_immunity)
 
 
+class Box:
+    def __init__(self, data: dict):
+        self.data = data
+        self.data_ind = dict((age, 0) for age in range(0, 100))
+
+    def next(self, age):
+        res = self.data[age][self.data_ind[age]]
+        self.data_ind[age] += 1
+        return res
+
 class Model:
     _SECTION_CONFIG = "Model"
     RANDOM_INTERACTION = Interaction(type_interaction="Random", degree=10)  # TODO(IvanKozlov98) move to another place
@@ -106,6 +116,91 @@ class Model:
         for person_id in people.keys():
             people[person_id].lag_specific_immun = lag
 
+    @staticmethod
+    def get_probs_tr():
+        prob_sym_dict = dict()
+        prob_mild_dict = dict()
+        prob_severe_dict = dict()
+        prob_dead_dict = dict()
+        for i in range(100):
+            if i < 10:
+                prob_sym_dict[i] = 0.5
+                prob_mild_dict[i] = 0.0005
+                prob_severe_dict[i] = 0.00003
+                prob_dead_dict[i] = 0.00002
+            elif i < 20:
+                prob_sym_dict[i] = 0.55
+                prob_mild_dict[i] = 0.00165
+                prob_severe_dict[i] = 0.00008
+                prob_dead_dict[i] = 0.00002
+            elif i < 30:
+                prob_sym_dict[i] = 0.6
+                prob_mild_dict[i] = 0.00720
+                prob_severe_dict[i] = 0.00036
+                prob_dead_dict[i] = 0.00010
+            elif i < 40:
+                prob_sym_dict[i] = 0.65
+                prob_mild_dict[i] = 0.0208
+                prob_severe_dict[i] = 0.00104
+                prob_dead_dict[i] = 0.00032
+            elif i < 50:
+                prob_sym_dict[i] = 0.7
+                prob_mild_dict[i] = 0.0343
+                prob_severe_dict[i] = 0.00216
+                prob_dead_dict[i] = 0.00098
+            elif i < 60:
+                prob_sym_dict[i] = 0.75
+                prob_mild_dict[i] = 0.0765
+                prob_severe_dict[i] = 0.00933
+                prob_dead_dict[i] = 0.00265
+            elif i < 70:
+                prob_sym_dict[i] = 0.8
+                prob_mild_dict[i] = 0.1328
+                prob_severe_dict[i] = 0.03639
+                prob_dead_dict[i] = 0.00766
+            elif i < 80:
+                prob_sym_dict[i] = 0.85
+                prob_mild_dict[i] = 0.20655
+                prob_severe_dict[i] = 0.08923
+                prob_dead_dict[i] = 0.02439
+            elif i < 90:
+                prob_sym_dict[i] = 0.9
+                prob_mild_dict[i] = 0.2457
+                prob_severe_dict[i] = 0.172
+                prob_dead_dict[i] = 0.0892
+            else:
+                prob_sym_dict[i] = 0.9
+                prob_mild_dict[i] = 0.2457
+                prob_severe_dict[i] = 0.1742
+                prob_dead_dict[i] = 0.1619
+        return prob_sym_dict, prob_mild_dict, prob_severe_dict, prob_dead_dict
+
+
+    def _init_solve_prob(self):
+        people_by_age_dict = dict((age, 0) for age in range(0, 100))
+        for person in self.people.values():
+            people_by_age_dict[person.age] += 1
+
+        for (age, cnt) in people_by_age_dict.items():
+            print(f"Age {age}: Count {cnt}")
+
+        prob_sym_dict, prob_mild_dict, prob_severe_dict, prob_dead_dict = Model.get_probs_tr()
+        solve_prob_sym_dict = dict()
+        solve_prob_mild_dict = dict()
+        solve_prob_severe_dict = dict()
+        solve_prob_dead_dict = dict()
+
+        for (age, cnt) in people_by_age_dict.items():
+            solve_prob_sym_dict[age] = np.random.choice(2, size=self.DAYS_COUNT * cnt, p=[prob_sym_dict[age], 1 - prob_sym_dict[age]])
+            solve_prob_mild_dict[age] = np.random.choice(2, size=cnt, p=[prob_mild_dict[age], 1 - prob_mild_dict[age]])
+            solve_prob_severe_dict[age] = np.random.choice(2, size=cnt, p=[prob_severe_dict[age], 1 - prob_severe_dict[age]])
+            solve_prob_dead_dict[age] = np.random.choice(2, size=cnt, p=[prob_dead_dict[age], 1 - prob_dead_dict[age]])
+
+        self.solve_prob_sym = Box(solve_prob_sym_dict)
+        self.solve_prob_mild = Box(solve_prob_mild_dict)
+        self.solve_prob_severe = Box(solve_prob_severe_dict)
+        self.solve_prob_dead = Box(solve_prob_dead_dict)
+
     def __init__(self,
                  config_model,
                  config_virus,
@@ -163,6 +258,8 @@ class Model:
         # self.init_traces()
         self.R = self.VIR_LOAD_THRESHOLD / 1.3
 
+        self._init_solve_prob()
+
 
     def _get_new_random_contacts(self):
         new_random_contacts_count = self.number_random_contacts[self.ind_number_random_contacts]
@@ -192,8 +289,10 @@ class Model:
         # update virus load of contact person
         contact_person.viral_load[-1] += giving_viral_load
         # update state of contact person if needed
-        if contact_person.viral_load[-1] >= self.VIR_LOAD_THRESHOLD and contact_person.state == "healthy":
-            self.make_person_infected(contact_person.id)
+        if contact_person.viral_load[-1] >= self.VIR_LOAD_THRESHOLD and contact_person.state == "healthy" and (not contact_person.flag_check_infected):
+            if self.solve_prob_sym.next(contact_person.age):
+                self.make_person_infected(contact_person.id)
+            contact_person.flag_check_infected = True
             return True
         return False
 
@@ -253,6 +352,7 @@ class Model:
         for person in self.people.values():
             if person.state == "healthy":
                 person.viral_load[-1] = 0
+                person.flag_check_infected = False
 
     @staticmethod
     def _get_contact_list_mild(person):
@@ -286,10 +386,37 @@ class Model:
         list_sp_im = np.array(list_sp_im)
         return np.mean(list_sp_im), np.median(list_sp_im)
 
+    def _update_state_infected_person(self, infected_person, dead_ids, recovered_ids):
+        infected_person.time_in_infected_state += 1
+        age = infected_person.age
+        if infected_person.viral_load[-1] > self.DEAD_THRESHOLD and (not infected_person.flag_check_dead):
+            # additional condition
+            if self.solve_prob_dead.next(age):
+                dead_ids.append(infected_person.id)
+            infected_person.flag_check_dead = True
+
+        elif infected_person.state == 'infected' and self._is_mild_infected(infected_person) and (not infected_person.flag_check_mild):
+            # additional condition
+            if self.solve_prob_mild.next(age):
+                infected_person.state = 'mild'
+            infected_person.flag_check_mild = True
+
+        elif infected_person.state == 'mild' and self._is_severe_infected(infected_person) and (not infected_person.flag_check_severe):
+            # additional condition
+            if self.solve_prob_severe.next(age):
+                infected_person.state = 'severe'
+            infected_person.flag_check_severe = True
+        # check if recovered
+        elif Model._is_recovered(infected_person):
+            infected_person.state = 'healthy'
+            # print(f"Recovering time: {infected_person.time_in_infected_state}")
+            infected_person.time_in_infected_state = 0
+            recovered_ids.append(infected_person.id)
+
     def _update_state_of_infected_people_step(self):
         """
         Update state of infected people
-        :return: list of ids recovered people
+        :return: list of ids recovered people and list of ids dead people
         """
         recovered_ids = []
         dead_ids = []
@@ -303,23 +430,8 @@ class Model:
             #     infected_person.time_in_infected_state]
             self._update_specific_immun(infected_person)
             self._update_viral_load(infected_person)
-            # Model._update_non_specific_immun(infected_person)
-            # update time in infected state
-            infected_person.time_in_infected_state += 1
             # update state of the infected person
-            if infected_person.viral_load[-1] > self.DEAD_THRESHOLD:
-                dead_ids.append(infected_person_id)
-            elif infected_person.state == 'infected' and self._is_mild_infected(infected_person):
-                infected_person.state = 'mild'
-            elif (infected_person.state == 'infected' or infected_person.state == 'healthy') \
-                    and self._is_severe_infected(infected_person):
-                infected_person.state = 'severe'
-            # check if recovered
-            elif Model._is_recovered(infected_person):
-                infected_person.state = 'healthy'
-                # print(f"Recovering time: {infected_person.time_in_infected_state}")
-                infected_person.time_in_infected_state = 0
-                recovered_ids.append(infected_person_id)
+            self._update_state_infected_person(infected_person, dead_ids, recovered_ids)
 
         return recovered_ids, dead_ids
 

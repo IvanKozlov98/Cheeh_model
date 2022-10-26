@@ -13,7 +13,7 @@ class Controller:
             config_model=model_config,
             config_virus=virus_config,
             config_cities=city_config,
-            use_cache_population=True,
+            use_cache_population=False,
             gui=True
         )
         self.model.set_view(view)

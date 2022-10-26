@@ -21,6 +21,65 @@ class Person:
     # constant
     RANDOM_NUMBER_BY_AGE_COUNT = 1000
 
+    # prob_sym_dict = dict()
+    # prob_mild_dict = dict()
+    # prob_severe_dict = dict()
+    # prob_dead_dict = dict()
+    # @staticmethod
+    # def static_init():
+    #     for i in range(100):
+    #         if i < 10:
+    #             Person.prob_sym_dict[i] = 0.5
+    #             Person.prob_mild_dict[i] = 0.0005
+    #             Person.prob_severe_dict[i] = 0.00003
+    #             Person.prob_dead_dict[i] = 0.00002
+    #         elif i < 20:
+    #             Person.prob_sym_dict[i] = 0.55
+    #             Person.prob_mild_dict[i] = 0.00165
+    #             Person.prob_severe_dict[i] = 0.00008
+    #             Person.prob_dead_dict[i] = 0.00002
+    #         elif i < 30:
+    #             Person.prob_sym_dict[i] = 0.6
+    #             Person.prob_mild_dict[i] = 0.00720
+    #             Person.prob_severe_dict[i] = 0.00036
+    #             Person.prob_dead_dict[i] = 0.00010
+    #         elif i < 40:
+    #             Person.prob_sym_dict[i] = 0.65
+    #             Person.prob_mild_dict[i] = 0.0208
+    #             Person.prob_severe_dict[i] = 0.00104
+    #             Person.prob_dead_dict[i] = 0.00032
+    #         elif i < 50:
+    #             Person.prob_sym_dict[i] = 0.7
+    #             Person.prob_mild_dict[i] = 0.0343
+    #             Person.prob_severe_dict[i] = 0.00216
+    #             Person.prob_dead_dict[i] = 0.00098
+    #         elif i < 60:
+    #             Person.prob_sym_dict[i] = 0.75
+    #             Person.prob_mild_dict[i] = 0.0765
+    #             Person.prob_severe_dict[i] = 0.00933
+    #             Person.prob_dead_dict[i] = 0.00265
+    #         elif i < 70:
+    #             Person.prob_sym_dict[i] = 0.8
+    #             Person.prob_mild_dict[i] = 0.1328
+    #             Person.prob_severe_dict[i] = 0.03639
+    #             Person.prob_dead_dict[i] = 0.00766
+    #         elif i < 80:
+    #             Person.prob_sym_dict[i] = 0.85
+    #             Person.prob_mild_dict[i] = 0.20655
+    #             Person.prob_severe_dict[i] = 0.08923
+    #             Person.prob_dead_dict[i] = 0.02439
+    #         elif i < 90:
+    #             Person.prob_sym_dict[i] = 0.9
+    #             Person.prob_mild_dict[i] = 0.2457
+    #             Person.prob_severe_dict[i] = 0.172
+    #             Person.prob_dead_dict[i] = 0.0892
+    #         else:
+    #             Person.prob_sym_dict[i] = 0.9
+    #             Person.prob_mild_dict[i] = 0.2457
+    #             Person.prob_severe_dict[i] = 0.1742
+    #             Person.prob_dead_dict[i] = 0.1619
+
+
     # @staticmethod
     # def static_init():
     #     Person.means_immunity = np.array([beta.pdf(x, a=3, b=5) for x in np.linspace(0.1, 0.9, 100)])
@@ -75,10 +134,13 @@ class Person:
         self.time_in_infected_state = 0
         self.viral_load = deque([0])
 
-
-
         # self.recovering_rate = round(self.non_specific_immun * ((100 - self.age) / 10) * (1.1 if self.gender == 'm' else 1.2))
         # self.recovering_rate = 1 if self.recovering_rate == 0 else self.recovering_rate
         # self.recovering_rate = int(self.recovering_rate)
         #
         # self.recovering_time = 0
+        self.flag_check_infected = False
+        self.flag_check_mild = False
+        self.flag_check_severe = False
+        self.flag_check_dead = False
+
