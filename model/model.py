@@ -157,7 +157,7 @@ class Model:
         self.ind_random_contacts = 0
         # init variables for immunity traces
         # self.init_traces()
-        self.R = (self.VIR_LOAD_THRESHOLD + self.DEAD_THRESHOLD) / 2
+        self.R = self.VIR_LOAD_THRESHOLD / 1.5
 
 
     def _get_new_random_contacts(self):
@@ -207,10 +207,11 @@ class Model:
             infected_person = self.people[infected_person_id]
             # infect other people
             for (contact_person_id, interaction) in self._get_contact_list_of_person(infected_person):
-                if contact_person_id not in self.people:
+                if contact_person_id not in self.people or self.people[contact_person_id].state != 'healthy':
                     continue
                 is_infected = self.infect(infected_person, self.people[contact_person_id], interaction)
                 if is_infected:
+                    self.people[contact_person_id].viral_load[-1] = self.VIR_LOAD_THRESHOLD
                     new_infected_ids.add(contact_person_id)
 
         return new_infected_ids
