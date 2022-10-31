@@ -42,9 +42,12 @@ def virus_count(days, repro_rate, vir_count_0, lag, a_shape_distrib_nespecific_p
     print(alphabeta_shape_distrib_nonspecific_param)
 
 
-    alfa = np.array(beta.rvs(size=people_count, a=alphabeta_shape_distrib_specific_param['alpha'], b=alphabeta_shape_distrib_specific_param['beta']))/norm_alfa_coef #alfa/norm_alfa_coef
+    alfa = np.array(beta.rvs(size=people_count, a=alphabeta_shape_distrib_specific_param['alpha'], b=alphabeta_shape_distrib_specific_param['beta'])) #alfa/norm_alfa_coef
     unspec_immun = beta.rvs(size=people_count, a=alphabeta_shape_distrib_nonspecific_param['alpha'], b=alphabeta_shape_distrib_nonspecific_param['beta'])
     spec_immun = 0
+
+    # specific = specific + alpha * Virus_particles
+    # Virus_particles = Virus_particles * (1 - arctanh(specific) * 2 / pi)
 
     for pers in range(people_count):
         sub_list = []
@@ -54,10 +57,13 @@ def virus_count(days, repro_rate, vir_count_0, lag, a_shape_distrib_nespecific_p
         spec_immun = 0
         for day in range(days):
             if day > lag:
-                spec_immun = np.arctan(sub_list[-lag]*alfa[pers] + spec_immun) #*2/np.pi
+                spec_immun = spec_immun + alfa * np.log(2.3 + (y / vir_count_limit))
             # print(spec_immun)
             y += y * repro_rate
-            y *= (1 - unspec_immun[pers]) * (1 - spec_immun/1.57)
+            y *= (1 - unspec_immun[pers]) * (1 - (np.arctan(spec_immun) / 1.57))
+            print(f"Virus count: {y}")
+            print(f"Specific immunity: {spec_immun}")
+            print(f"Day: {day}")
             # print(y)
             sub_list.append(y)
             sub_spec_immun_list.append(spec_immun)
@@ -70,7 +76,7 @@ def virus_count(days, repro_rate, vir_count_0, lag, a_shape_distrib_nespecific_p
 # Set up data
 DAYS_CONST = int(config.get('DEFAULT', 'DAYS'))
 x = range(DAYS_CONST)
-people_count = 20
+people_count = 1
 
 vir_count_0_const = 100
 repro_rate_const = 0.2
@@ -83,6 +89,8 @@ a_shape_distrib_nespecific_param_const = 0.2
 b_shape_distrib_nespecific_param_const = 0.1
 a_shape_distrib_specific_param_const = 0.2
 b_shape_distrib_specific_param_const = 0.1
+print("---------------------")
+print("---------------------")
 
 y, spec_immun = virus_count(DAYS_CONST,
                             repro_rate_const,
@@ -95,6 +103,10 @@ y, spec_immun = virus_count(DAYS_CONST,
                             a_shape_distrib_specific_param_const,
                             b_shape_distrib_specific_param_const
                             ) # virus count
+print("---------------------")
+print("---------------------")
+
+
 
 source_data_dict = {str('x'):x}
 for pers in range(people_count):

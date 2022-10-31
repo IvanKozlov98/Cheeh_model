@@ -198,10 +198,33 @@ class Model:
         self.solve_prob_severe = Box(solve_prob_severe_dict)
         self.solve_prob_dead = Box(solve_prob_dead_dict)
 
+    @staticmethod
+    def create_func_obj(func_code_str):
+        g = dict()
+        l = dict()
+        exec(func_code_str, g, l)
+        if l:
+            return list(l.values())[0]
+
+    def _init_formulas(self, config_formulas):
+        next_viral_load_func_code = "def _get_next_viral_load__(cur_viral_load, virus_spread_rate, specific_immun, non_specific_immun):\n    import numpy as np \n    return " + \
+                                    get_value_from_config(config_formulas, "Formulas", 'VIRAL_LOAD_NEXT')
+        self.next_viral_load_func = Model.create_func_obj(next_viral_load_func_code)
+        ############
+        next_specific_immun_func_code = "def _get_next_specific_immun__(cur_specific_immun, cur_viral_load, alpha):\n    import numpy as np \n    return " +\
+                                        get_value_from_config(config_formulas, "Formulas", 'SPECIFIC_IMMUNITY_NEXT')
+        self.next_specific_immun_func = Model.create_func_obj(next_specific_immun_func_code)
+    #     giving_viral_load_func
+        ############
+        giving_viral_load_func_code = "def _giving_viral_load__(interaction_degree, viral_load, R, specific_immun):\n    import numpy as np \n    return " + \
+                                        get_value_from_config(config_formulas, "Formulas", 'GIVING_INFECTED')
+        self.giving_viral_load_func = Model.create_func_obj(giving_viral_load_func_code)
+
     def __init__(self,
                  config_model,
                  config_virus,
                  config_cities,
+                 config_formulas,
                  use_cache_population=True,
                  cache_file_population=True,
                  gui=False):
@@ -257,6 +280,8 @@ class Model:
 
         self._init_solve_prob()
 
+        self._init_formulas(config_formulas)
+
 
     def _get_new_random_contacts(self):
         new_random_contacts_count = self.number_random_contacts[self.ind_number_random_contacts]
@@ -270,7 +295,9 @@ class Model:
     def set_view(self, view):
         self.view = view
 
-
+    # @staticmethod
+    # def giving_viral_load_func(interaction_degree, viral_load, R, specific_immun):
+    #     return interaction_degree * (viral_load / R) * (1 - specific_immun)
 
     def infect(self, infected_person, contact_person, interaction):
         """
@@ -282,7 +309,12 @@ class Model:
         :return: is other person became or not infected
         """
         # TODO(IvanKozlov98) write more complex formula than that
-        giving_viral_load = interaction.degree * (infected_person.viral_load[-1] / self.R) * (1 - contact_person.specific_immun)
+        giving_viral_load = self.giving_viral_load_func(
+            interaction.degree,
+            infected_person.viral_load[-1],
+            self.R,
+            contact_person.specific_immun
+        )
         # update virus load of contact person
         contact_person.viral_load[-1] += giving_viral_load
         # update state of contact person if needed
@@ -316,21 +348,32 @@ class Model:
 
         return new_infected_ids
 
+    @staticmethod
+    def _get_next_viral_load(cur_viral_load, virus_spread_rate, specific_immun, non_specific_immun):
+        return cur_viral_load * (1 + virus_spread_rate) * (1 - (specific_immun / 1.57)) * (1 - non_specific_immun)
 
     def _update_viral_load(self, person):
-        cur_viral_load = person.viral_load[-1]
-        cur_viral_load *= (1 + self.virus.spread_rate)
-        cur_viral_load *= (1 - (person.specific_immun / 1.57079632679))
-        cur_viral_load *= (1 - person.non_specific_immun)
         # update value
-        person.viral_load.append(cur_viral_load)
+        person.viral_load.append(self.next_viral_load_func(
+            person.viral_load[-1],
+            self.virus.spread_rate,
+            person.specific_immun,
+            person.non_specific_immun
+        ))
         if len(person.viral_load) > person.lag_specific_immun:
             person.viral_load.popleft()
 
+    @staticmethod
+    def _get_next_specific_immun(cur_specific_immun, cur_viral_load, alpha):
+        return np.arctan(cur_viral_load * alpha + cur_specific_immun)
+
     def _update_specific_immun(self, person):
         if person.time_in_infected_state > person.lag_specific_immun:
-            person.specific_immun = np.arctan(
-                person.viral_load[0] * person.alpha + person.specific_immun)
+            person.specific_immun = self.next_specific_immun_func(
+                person.specific_immun,
+                person.viral_load[0],
+                person.alpha
+            )
 
     def _is_mild_infected(self, person):
         return in_range(self.MILD_THRESHOLD, person.viral_load[-1], self.SEVERE_THRESHOLD)

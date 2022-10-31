@@ -7,12 +7,13 @@ class Controller:
     def __init__(self):
         self.model = None
 
-    def create_model(self, model_config, city_config, virus_config, view):
+    def create_model(self, model_config, city_config, virus_config, formulas_config, view):
         # here we initialize Model
         self.model = Model(
             config_model=model_config,
             config_virus=virus_config,
             config_cities=city_config,
+            config_formulas=formulas_config,
             use_cache_population=True,
             gui=True
         )

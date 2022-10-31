@@ -26,7 +26,7 @@ class GuiApp(tk.Tk):
         super(GuiApp, self).__init__()
         #
         self.HEIGHT = 800
-        self.WIDTH = 1200
+        self.WIDTH = 1278
         self.controller = controller
         self.model = None
         self.thread = None  # for run Model
@@ -185,6 +185,13 @@ class GuiApp(tk.Tk):
         model_params["DAYS_COUNT"] = self.days_count.get()
         return model_params
 
+    def get_formulas_params(self):
+        formulas_params = dict()
+        formulas_params["VIRAL_LOAD_NEXT"] = self.formula_virus_count.get()
+        formulas_params["SPECIFIC_IMMUNITY_NEXT"] = self.formula_specific_immun.get()
+        formulas_params["GIVING_INFECTED"] = self.formula_giving_infected.get()
+        return formulas_params
+
     def my_program(self):
         global thread
         self.validate_params()
@@ -193,10 +200,11 @@ class GuiApp(tk.Tk):
         virus_params = self.get_virus_params()
         city_params = self.get_city_params()
         model_params = self.get_model_params()
+        formulas_params = self.get_formulas_params()
         #
         # start program
         self.model = self.controller.create_model(model_config=model_params, city_config=city_params,
-                                                  virus_config=virus_params, view=self)
+                                                  virus_config=virus_params, formulas_config=formulas_params, view=self)
         self.thread = threading.Thread(target=self.model.run)
         self.thread.daemon = True
         self.thread.start()
@@ -236,9 +244,11 @@ class GuiApp(tk.Tk):
         tab1 = ttk.Frame(tab_control)
         tab2 = ttk.Frame(tab_control)
         tab3 = ttk.Frame(tab_control)
+        tab4 = ttk.Frame(tab_control)
         tab_control.add(tab1, text='Model parameters')
         tab_control.add(tab2, text='Virus parameters')
         tab_control.add(tab3, text='City parameters')
+        tab_control.add(tab4, text='Formulas')
 
         #
         bg = tk.PhotoImage(file="data/img/virus.png")
@@ -306,6 +316,34 @@ class GuiApp(tk.Tk):
         self.city_name = Entry(tab3, width=10, font=Font(family='Helvetica', size=30, weight='bold'), textvariable=self.city_name_var)
         self.city_name.grid(column=0, row=3)
 
+        # Formulas
+        label4 = Label(tab4, image=bg)
+        label4.place(x=0, y=0)
+        # virus count formula
+        self.formula_virus_count_var = StringVar()
+        w1 = Label(tab4, text="Virus_count(\n cur_viral_load, \n virus_spread_rate, \n specific_immun,\n non_specific_immun)", fg="navyblue",
+                   font=Font(family='Helvetica', size=12, weight='bold'), background="white")
+        w1.grid(column=0, row=2)
+        self.formula_virus_count = Entry(tab4, width=70, font=Font(family='Helvetica', size=10, weight='bold'),
+                               textvariable=self.formula_virus_count_var)
+        self.formula_virus_count.grid(column=0, row=3)
+        # specific immunity formula
+        self.formula_specific_immun_var = StringVar()
+        w2 = Label(tab4, text="Specific_immun(\n cur_specific_immun, \n cur_viral_load, \n alpha)",
+                   fg="navyblue", font=Font(family='Helvetica', size=12, weight='bold'),background="white")
+        w2.grid(column=0, row=4)
+        self.formula_specific_immun = Entry(tab4, width=70, font=Font(family='Helvetica', size=10, weight='bold'),
+                                         textvariable=self.formula_specific_immun_var)
+        self.formula_specific_immun.grid(column=0, row=5)
+        # infected giving formula
+        # self.formula_giving_infected_var
+        self.formula_giving_infected_var = StringVar()
+        w3 = Label(tab4, text="Giving_infected(\n interaction_degree, \n viral_load, \n R, \n specific_immun)",
+                   fg="navyblue", font=Font(family='Helvetica', size=12, weight='bold'), background="white")
+        w3.grid(column=0, row=6)
+        self.formula_giving_infected = Entry(tab4, width=70, font=Font(family='Helvetica', size=10, weight='bold'),
+                                            textvariable=self.formula_giving_infected_var)
+        self.formula_giving_infected.grid(column=0, row=7)
         #########################################
 
         self.tab_control_vis = ttk.Notebook(self.frame2)
@@ -379,6 +417,11 @@ class GuiApp(tk.Tk):
             self.initial_infected_people_count_var.set(get_value_from_config(file, "Model", "INITIAL_INFECTED_PEOPLE_COUNT"))
             self.days_count_var.set(get_value_from_config(file, "Model", "DAYS_COUNT"))
 
+        def load_formulas_config_impl(file):
+            self.formula_virus_count_var.set(get_value_from_config(file, "Formulas", "VIRAL_LOAD_NEXT"))
+            self.formula_specific_immun_var.set(get_value_from_config(file, "Formulas", "SPECIFIC_IMMUNITY_NEXT"))
+            self.formula_giving_infected_var.set(get_value_from_config(file, "Formulas", "GIVING_INFECTED"))
+
         def load_virus_config_impl(file):
             self.lag_w_var.set(get_value_from_config(file, "Virus", "LAG"))
             self.non_specific_immun_mean_var.set(get_value_from_config(file, "Virus", "NON_SPECIFIC_IMMUN_MEAN"))
@@ -392,6 +435,9 @@ class GuiApp(tk.Tk):
             self.dead_thr_var.set(get_value_from_config(file, "Virus", "DEAD_THRESHOLD"))
             self.spread_rate_var.set(get_value_from_config(file, "Virus", "SPREAD_RATE"))
 
+        def load_formulas_config():
+            file = filedialog.askopenfilename(filetypes=(("Config files", "*.ini"), ("all files", "*.*")))
+            load_formulas_config_impl(file)
 
         def load_model_config():
             file = filedialog.askopenfilename(filetypes = (("Config files", "*.ini"),("all files", "*.*")))
@@ -410,6 +456,7 @@ class GuiApp(tk.Tk):
         new_item.add_command(label='Load model parameters', command=load_model_config)
         new_item.add_command(label='Load virus parameters', command=load_virus_config)
         new_item.add_command(label='Load city parameters', command=load_city_config)
+        new_item.add_command(label='Load formulas', command=load_formulas_config)
         menu.add_cascade(label='File', font=("Helvetica", "16"), menu=new_item)
         self.config(menu=menu)
         ##########################################
@@ -417,6 +464,7 @@ class GuiApp(tk.Tk):
         load_city_config_impl("config/cities/Voronesh.ini")
         load_model_config_impl("config/model/model.ini")
         load_virus_config_impl("config/viruses/covid-19.ini")
+        load_formulas_config_impl("config/formulas/formulas.ini")
 
     def run(self):
         self.mainloop()
