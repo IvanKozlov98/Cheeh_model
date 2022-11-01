@@ -2,6 +2,7 @@ from city.builder_city import BuilderCity
 from util.util import *
 import pickle
 import os
+import numpy as np
 
 
 class Location:
@@ -12,17 +13,46 @@ class Location:
         self.name_location = get_value_from_config(config_file, Location._SECTION_CONFIG, 'NAME_LOCATION')
 
         file_with_population = Location._get_filename_city(population_count, self.name_location)
+        small_group_sizes_mean = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'SMALL_GROUP_SIZE_MEAN')),
+        small_group_sizes_sigma = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'SMALL_GROUP_SIZE_SIGMA')),
+        big_group_sizes_mean_1 = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'BIG_GROUP_SIZE_UP_25_MEAN')),
+        big_group_sizes_sigma_1 = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'BIG_GROUP_SIZE_UP_25_SIGMA')),
+        big_group_sizes_mean_2 = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'BIG_GROUP_SIZE_UP_60_MEAN')),
+        big_group_sizes_sigma_2 = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'BIG_GROUP_SIZE_UP_60_SIGMA')),
+        big_group_sizes_mean_3 = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'BIG_GROUP_SIZE_AFTER_60_MEAN')),
+        big_group_sizes_sigma_3 = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'BIG_GROUP_SIZE_AFTER_60_SIGMA'))
+
         if use_cache and os.path.isfile(file_with_population):
             print("Loading population from cache")
             with open(file_with_population, 'rb') as f:
                 self.people = pickle.load(f)
         else:
             print("Start build population...")
-            self.people = BuilderCity.build_city(population_count)
+            self.people = BuilderCity.build_city(
+                population_count,
+                small_group_sizes_mean=small_group_sizes_mean,
+                small_group_sizes_sigma=small_group_sizes_sigma,
+                big_group_sizes_mean_1=big_group_sizes_mean_1,
+                big_group_sizes_sigma_1=big_group_sizes_sigma_1,
+                big_group_sizes_mean_2=big_group_sizes_mean_2,
+                big_group_sizes_sigma_2=big_group_sizes_sigma_2,
+                big_group_sizes_mean_3=big_group_sizes_mean_3,
+                big_group_sizes_sigma_3=big_group_sizes_sigma_3
+            )
             print("End builing population.")
             if cache_file:
                 with open(file_with_population, 'wb') as f:
                     pickle.dump(self.people, f)
+        print("Grouping people")
+        BuilderCity.group_by_workspace(self.people,
+                                       small_group_sizes_mean,
+                                       small_group_sizes_sigma,
+                                       big_group_sizes_mean_1,
+                                       big_group_sizes_sigma_1,
+                                       big_group_sizes_mean_2,
+                                       big_group_sizes_sigma_2,
+                                       big_group_sizes_mean_3,
+                                       big_group_sizes_sigma_3)
 
     @staticmethod
     def _get_filename_city(population_count, name_location):

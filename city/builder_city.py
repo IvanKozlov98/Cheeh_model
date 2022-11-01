@@ -5,6 +5,7 @@ from model.interaction import Interaction
 import numpy as np
 import pandas as pd
 import numpy.random as nprnd
+from scipy.stats import norm
 
 
 class BuilderCity:
@@ -17,6 +18,10 @@ class BuilderCity:
 
     # _EARLIER_AGE_BEAR = 18
     # _LATE_AGE_BEAR = 35
+    small_group_sizes_ind = None
+    big_group_sizes_1_ind = None
+    big_group_sizes_2_ind = None
+    big_group_sizes_3_ind = None
 
 
     @staticmethod
@@ -33,10 +38,6 @@ class BuilderCity:
     @staticmethod
     def get_man_age_distribution(n, dist):
         return np.random.choice(100, size=n, p=np.array(dist / np.sum(dist)))
-
-    @staticmethod
-    def get_woman_age_distribution(n):
-        return BuilderCity.get_man_age_distribution(n)
 
     @staticmethod
     def get_pairs(man, woman):
@@ -86,6 +87,8 @@ class BuilderCity:
     @staticmethod
     def conn_group(people, group, interaction):
         group_size = len(group)
+        if group_size == 0:
+            return
         for ind_person_1 in range(group_size):
             for ind_person_2 in range(group_size):
                 if ind_person_1 == ind_person_2:
@@ -93,21 +96,84 @@ class BuilderCity:
                 BuilderCity.connect_persons(people[group[ind_person_1]], people[group[ind_person_2]], interaction)
 
     @staticmethod
-    def group_by_workspace(people, ids_people_by_age):
+    def group_by_workspace_impl(people, ids_people_by_age, big_group_sizes_1_ind, big_group_sizes_2_ind, big_group_sizes_3_ind, small_group_sizes):
+        ind_small_group = 0
         for age in range(3, 100):
-            size_big_group, size_small_group = (15, 3) if age < 25 else (30, 5) if age < 60 else (1, 5)
+            big_group_inds = big_group_sizes_1_ind if age < 25 else big_group_sizes_2_ind if age < 60 else big_group_sizes_3_ind
             people_ids_with_same_old = ids_people_by_age[age]
             np.random.shuffle(people_ids_with_same_old)
-            big_groups = np.array_split(people_ids_with_same_old, (len(people_ids_with_same_old) // size_big_group) + 1)
+            big_groups = np.split(people_ids_with_same_old, big_group_inds)
             for big_group in big_groups:
-                small_groups = np.array_split(big_group, (len(people_ids_with_same_old) // size_small_group) + 1)
                 BuilderCity.conn_group(people, big_group, BuilderCity.BIG_GROUP_INTERACTION)
-                for small_group in small_groups:
-                    BuilderCity.conn_group(people, small_group, BuilderCity.SMALL_GROUP_INTERACTION)
+                cur_big_group_people = 0
+                while cur_big_group_people < len(big_group):
+                    next_cur_big_group_people = cur_big_group_people + small_group_sizes[ind_small_group]
+                    BuilderCity.conn_group(people, big_group[cur_big_group_people : next_cur_big_group_people], BuilderCity.SMALL_GROUP_INTERACTION)
+                    # update indices
+                    ind_small_group += 1
+                    cur_big_group_people = next_cur_big_group_people
 
 
     @staticmethod
-    def build_city(population_count):
+    def get_group_sizes(population_count,
+                    small_group_sizes_mean,
+                   small_group_sizes_sigma,
+                   big_group_sizes_mean_1,
+                   big_group_sizes_sigma_1,
+                   big_group_sizes_mean_2,
+                   big_group_sizes_sigma_2,
+                   big_group_sizes_mean_3,
+                   big_group_sizes_sigma_3):
+        return (np.abs(norm.rvs(loc=small_group_sizes_mean, scale=small_group_sizes_sigma, size=population_count)).astype(int),
+            np.add.accumulate(np.abs(norm.rvs(loc=big_group_sizes_mean_1, scale=big_group_sizes_sigma_1, size=population_count))).astype(int),
+            np.add.accumulate(np.abs(norm.rvs(loc=big_group_sizes_mean_2, scale=big_group_sizes_sigma_2, size=population_count))).astype(int),
+            np.add.accumulate(np.abs(norm.rvs(loc=big_group_sizes_mean_3, scale=big_group_sizes_sigma_3, size=population_count))).astype(int))
+
+    @staticmethod
+    def get_ids_people_by_age(people):
+        ids_people_by_age = dict((age, []) for age in range(0, 100))
+        for (person_id, person) in people.items():
+            ids_people_by_age[person.age].append(person_id)
+        return ids_people_by_age
+
+    @staticmethod
+    def group_by_workspace(people,
+                    small_group_sizes_mean,
+                   small_group_sizes_sigma,
+                   big_group_sizes_mean_1,
+                   big_group_sizes_sigma_1,
+                   big_group_sizes_mean_2,
+                   big_group_sizes_sigma_2,
+                   big_group_sizes_mean_3,
+                   big_group_sizes_sigma_3):
+        # 1 step
+        (small_group_sizes, big_group_sizes_1_ind, big_group_sizes_2_ind, big_group_sizes_3_ind) = BuilderCity.get_group_sizes(
+          population_count=len(people),
+          small_group_sizes_mean=small_group_sizes_mean,
+          small_group_sizes_sigma=small_group_sizes_sigma,
+          big_group_sizes_mean_1=big_group_sizes_mean_1,
+          big_group_sizes_sigma_1=big_group_sizes_sigma_1,
+          big_group_sizes_mean_2=big_group_sizes_mean_2,
+          big_group_sizes_sigma_2=big_group_sizes_sigma_2,
+          big_group_sizes_mean_3=big_group_sizes_mean_3,
+          big_group_sizes_sigma_3=big_group_sizes_sigma_3)
+        # 2 step
+        ids_people_by_age = BuilderCity.get_ids_people_by_age(people)
+        # 3 step
+        BuilderCity.group_by_workspace_impl(people, ids_people_by_age, big_group_sizes_1_ind, big_group_sizes_2_ind,
+                                big_group_sizes_3_ind, small_group_sizes)
+
+    @staticmethod
+    def build_city(population_count,
+                   small_group_sizes_mean,
+                   small_group_sizes_sigma,
+                   big_group_sizes_mean_1,
+                   big_group_sizes_sigma_1,
+                   big_group_sizes_mean_2,
+                   big_group_sizes_sigma_2,
+                   big_group_sizes_mean_3,
+                   big_group_sizes_sigma_3
+                   ):
         """
 
         :return: dict of people with static contacts {people_id -> people}
@@ -167,7 +233,14 @@ class BuilderCity:
                 BuilderCity.connect_parent_with_child(people[man_id], people[woman_id], people[child_id])
 
         # 4 step: group by small/big group(kindergarten, school, work)
-        BuilderCity.group_by_workspace(people, ids_people_by_age)
+        # BuilderCity.group_by_workspace(people,
+        #             small_group_sizes_mean,
+        #            small_group_sizes_sigma,
+        #            big_group_sizes_mean_1,
+        #            big_group_sizes_sigma_1,
+        #            big_group_sizes_mean_2,
+        #            big_group_sizes_sigma_2,
+        #            big_group_sizes_mean_3,
+        #            big_group_sizes_sigma_3)
 
         return people
-

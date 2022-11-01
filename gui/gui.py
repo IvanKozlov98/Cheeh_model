@@ -63,10 +63,10 @@ class GuiApp(tk.Tk):
         self.initialize()
 
     @staticmethod
-    def _create_spin(tab, text, column, row, from_=0.0, to=1.0, increment=0.01, string_var=None):
+    def _create_spin(tab, text, column, row, from_=0.0, to=1.0, increment=0.01, string_var=None, width=10):
         w = Label(tab, text=text, fg="navyblue", font="50", background="white")
         w.grid(column=column, row=row)
-        spin = Spinbox(tab, from_=from_, to=to, increment=increment, width=10,
+        spin = Spinbox(tab, from_=from_, to=to, increment=increment, width=width,
                        font=Font(family='Helvetica', size=30, weight='bold'), textvariable=string_var)
         spin.grid(column=column, row=row + 1)
         return spin
@@ -177,6 +177,15 @@ class GuiApp(tk.Tk):
         city_params = dict()
         city_params["POPULATION_COUNT"] = self.population_count.get()
         city_params["NAME_LOCATION"] = self.city_name.get()
+        city_params["BIG_GROUP_SIZE_UP_25_MEAN"] = self.big_group_1_mean.get()
+        city_params["BIG_GROUP_SIZE_UP_60_MEAN"] = self.big_group_2_mean.get()
+        city_params["BIG_GROUP_SIZE_AFTER_60_MEAN"] = self.big_group_3_mean.get()
+        city_params["BIG_GROUP_SIZE_UP_25_SIGMA"] = self.big_group_1_sigma.get()
+        city_params["BIG_GROUP_SIZE_UP_60_SIGMA"] = self.big_group_2_sigma.get()
+        city_params["BIG_GROUP_SIZE_AFTER_60_SIGMA"] = self.big_group_3_sigma.get()
+        city_params["SMALL_GROUP_SIZE_MEAN"] = self.small_group_mean.get()
+        city_params["SMALL_GROUP_SIZE_SIGMA"] = self.small_group_sigma.get()
+
         return city_params
 
     def get_model_params(self):
@@ -309,12 +318,71 @@ class GuiApp(tk.Tk):
         self.population_count = self._create_spin(tab3, "Population count", 0, 0,
                                                   from_=1000, to=1000000, increment=1000,
                                                   string_var=self.population_count_var)
+
+
+        # 1 group
+        self.big_group_1_mean_var = StringVar()
+        # Size big group up to 25 years old:
+        ll1 = Label(tab3, text="Size big group up to 25 years old:", fg="navyblue", font=Font(size=15, weight='bold'), background="white")
+        ll1.grid(column=0, row=2)
+        self.big_group_1_mean = self._create_spin(tab3, "Mean", 0, 3,
+                                                  from_=1, to=100, increment=1,
+                                                  string_var=self.big_group_1_mean_var, width=5)
+        self.big_group_1_sigma_var = StringVar()
+        self.big_group_1_sigma = self._create_spin(tab3, "Sigma", 1, 3,
+                                                  from_=1, to=100, increment=1,
+                                                  string_var=self.big_group_1_sigma_var, width=5)
+        # 2 group
+        ll2 = Label(tab3, text="Size big group up to 60 years old:", fg="navyblue", font=Font(size=15, weight='bold'),
+                    background="white")
+        ll2.grid(column=0, row=5)
+        self.big_group_2_mean_var = StringVar()
+        self.big_group_2_mean = self._create_spin(tab3, "Mean", 0, 6,
+                                                  from_=1, to=100, increment=1,
+                                                  string_var=self.big_group_2_mean_var, width=5)
+        self.big_group_2_sigma_var = StringVar()
+        self.big_group_2_sigma = self._create_spin(tab3, "Sigma", 1, 6,
+                                                  from_=1, to=100, increment=1,
+                                                  string_var=self.big_group_2_sigma_var, width=5)
+        # 3 group
+        ll3 = Label(tab3, text="Size big group up after 60 years:", fg="navyblue", font=Font(size=15, weight='bold'),
+                    background="white")
+        ll3.grid(column=0, row=8)
+        self.big_group_3_mean_var = StringVar()
+        self.big_group_3_mean = self._create_spin(tab3, "Mean", 0, 9,
+                                                  from_=1, to=100, increment=1,
+                                                  string_var=self.big_group_3_mean_var, width=5)
+        self.big_group_3_sigma_var = StringVar()
+        self.big_group_3_sigma = self._create_spin(tab3, "Sigma", 1, 9,
+                                                  from_=1, to=100, increment=1,
+                                                  string_var=self.big_group_3_sigma_var, width=5)
+        # sep = ttk.Separator(master=tab3,
+        #                     orient=HORIZONTAL,
+        #                     style='blue.TSeparator')
+        # sep.grid(column=0, row=11)
+        # Separator object
+        # separator = ttk.Separator(tab3, orient='horizontal')
+        # separator.place(relx=0.47, rely=0, relwidth=0.2, relheight=1)
+
+        # 1' group
+        ll4 = Label(tab3, text="Size small group:", fg="navyblue", font=Font(size=15, weight='bold'),
+                    background="white")
+        ll4.grid(column=0, row=11)
+        self.small_group_mean_var = StringVar()
+        self.small_group_mean = self._create_spin(tab3, "Mean", 0, 12,
+                                                  from_=1, to=100, increment=1,
+                                                  string_var=self.small_group_mean_var, width=5)
+        self.small_group_sigma_var = StringVar()
+        self.small_group_sigma = self._create_spin(tab3, "Sigma", 1, 12,
+                                                  from_=1, to=100, increment=1,
+                                                  string_var=self.small_group_sigma_var, width=5)
+
         self.city_name_var = StringVar()
 
         w = Label(tab3, text="Name of city", fg="navyblue", font="50", background="white")
-        w.grid(column=0, row=2)
+        w.grid(column=0, row=18)
         self.city_name = Entry(tab3, width=10, font=Font(family='Helvetica', size=30, weight='bold'), textvariable=self.city_name_var)
-        self.city_name.grid(column=0, row=3)
+        self.city_name.grid(column=0, row=19)
 
         # Formulas
         label4 = Label(tab4, image=bg)
@@ -412,6 +480,16 @@ class GuiApp(tk.Tk):
         def load_city_config_impl(file):
             self.population_count_var.set(get_value_from_config(file, "City", "POPULATION_COUNT"))
             self.city_name_var.set(get_value_from_config(file, "City", "NAME_LOCATION"))
+
+            self.big_group_1_mean_var.set(get_value_from_config(file, "City", "BIG_GROUP_SIZE_UP_25_MEAN"))
+            self.big_group_2_mean_var.set(get_value_from_config(file, "City", "BIG_GROUP_SIZE_UP_60_MEAN"))
+            self.big_group_3_mean_var.set(get_value_from_config(file, "City", "BIG_GROUP_SIZE_AFTER_60_MEAN"))
+            self.big_group_1_sigma_var.set(get_value_from_config(file, "City", "BIG_GROUP_SIZE_UP_25_SIGMA"))
+            self.big_group_2_sigma_var.set(get_value_from_config(file, "City", "BIG_GROUP_SIZE_UP_60_SIGMA"))
+            self.big_group_3_sigma_var.set(get_value_from_config(file, "City", "BIG_GROUP_SIZE_AFTER_60_SIGMA"))
+            self.small_group_mean_var.set(get_value_from_config(file, "City", "SMALL_GROUP_SIZE_MEAN"))
+            self.small_group_sigma_var.set(get_value_from_config(file, "City", "SMALL_GROUP_SIZE_SIGMA"))
+
 
         def load_model_config_impl(file):
             self.initial_infected_people_count_var.set(get_value_from_config(file, "Model", "INITIAL_INFECTED_PEOPLE_COUNT"))

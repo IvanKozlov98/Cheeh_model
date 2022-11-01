@@ -14,7 +14,7 @@ class Controller:
             config_virus=virus_config,
             config_cities=city_config,
             config_formulas=formulas_config,
-            use_cache_population=True,
+            use_cache_population=False,
             gui=True
         )
         self.model.set_view(view)
