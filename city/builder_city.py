@@ -13,8 +13,7 @@ class BuilderCity:
     # TODO(IvanKozlov98) move to another place
     PARENT_CHILD_INTERACTION = Interaction(type_interaction="Home", degree=50)
     PAIR_INTERACTION = Interaction(type_interaction="Home", degree=80)
-    SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=30)
-    BIG_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=10)
+
 
     # _EARLIER_AGE_BEAR = 18
     # _LATE_AGE_BEAR = 35
@@ -48,8 +47,8 @@ class BuilderCity:
 
     @staticmethod
     def connect_persons(p1, p2, interaction):
-        p1.static_contact_list.append((p2.id, interaction))
-        p2.static_contact_list.append((p1.id, interaction))
+        p1.home_contact_list.append((p2.id, interaction))
+        p2.home_contact_list.append((p1.id, interaction))
         # TODO (IvanKozlov98) to add inheritance immunity
 
     @staticmethod
@@ -96,22 +95,68 @@ class BuilderCity:
                 BuilderCity.connect_persons(people[group[ind_person_1]], people[group[ind_person_2]], interaction)
 
     @staticmethod
-    def group_by_workspace_impl(people, ids_people_by_age, big_group_sizes_1_ind, big_group_sizes_2_ind, big_group_sizes_3_ind, small_group_sizes):
-        ind_small_group = 0
-        for age in range(3, 100):
-            big_group_inds = big_group_sizes_1_ind if age < 25 else big_group_sizes_2_ind if age < 60 else big_group_sizes_3_ind
-            people_ids_with_same_old = ids_people_by_age[age]
-            np.random.shuffle(people_ids_with_same_old)
-            big_groups = np.split(people_ids_with_same_old, big_group_inds)
-            for big_group in big_groups:
-                BuilderCity.conn_group(people, big_group, BuilderCity.BIG_GROUP_INTERACTION)
-                cur_big_group_people = 0
-                while cur_big_group_people < len(big_group):
-                    next_cur_big_group_people = cur_big_group_people + small_group_sizes[ind_small_group]
-                    BuilderCity.conn_group(people, big_group[cur_big_group_people : next_cur_big_group_people], BuilderCity.SMALL_GROUP_INTERACTION)
-                    # update indices
-                    ind_small_group += 1
-                    cur_big_group_people = next_cur_big_group_people
+    def group_by_workspace_on_age_group(people, ids_people, big_group_sizes, small_group_sizes, start_big_id, start_small_id):
+        small_group_ind = 0
+        cur_ind_person = 0
+        people_group_size = len(ids_people)
+        small_group_sizes = np.clip(small_group_sizes, np.min(small_group_sizes), np.min(big_group_sizes))
+        for (big_group_ind, big_group_size) in enumerate(big_group_sizes):
+            # assign big group ind
+            cur_small_group_size = 0
+            for _ in range(big_group_size):
+                if cur_ind_person >= people_group_size:
+                    return small_group_ind
+                person_id = ids_people[cur_ind_person]
+                # big group assign
+                people[person_id].big_group_id = start_big_id + big_group_ind
+                # print(f"Big {start_big_id + big_group_ind}")
+                # small group assigning
+                people[person_id].small_group_id = start_small_id + small_group_ind
+                # print(f"Small {start_small_id + small_group_ind}")
+                if cur_small_group_size == small_group_sizes[small_group_ind]:
+                    cur_small_group_size = 0
+                    small_group_ind += 1
+                cur_small_group_size += 1
+                # common update
+                cur_ind_person += 1
+            if cur_small_group_size == small_group_sizes[small_group_ind]:
+                small_group_ind += 1
+
+        return small_group_ind
+
+
+
+    @staticmethod
+    def group_by_workspace_impl(people, ids_people_by_age, big_group_sizes_1, big_group_sizes_2, big_group_sizes_3, small_group_sizes):
+        ids_people_1 = list(filter(lambda person_id: in_range(3, people[person_id].age, 25), list(people.keys())))
+        ids_people_2 = list(filter(lambda person_id: in_range(26, people[person_id].age, 60), list(people.keys())))
+        ids_people_3 = list(filter(lambda person_id: in_range(61, people[person_id].age, 100), list(people.keys())))
+        # print(np.max(np.histogram(list(map(lambda person: person.small_group_id, people.values())))[0]))
+        # print(np.max(np.histogram(list(map(lambda person: person.big_group_id, people.values())))[0]))
+
+        # print(big_group_sizes_1[:100])
+        # print("-----------")
+        # print(small_group_sizes[:100])
+        # print(f"len 1 {len(ids_people_1)}")
+        # print(ids_people_1[:100])
+
+
+
+        next_small_start = BuilderCity.group_by_workspace_on_age_group(people, ids_people_1, big_group_sizes_1, small_group_sizes, 0, 0)
+        # print(f"next_small_start is {next_small_start}")
+        next_small_start = BuilderCity.group_by_workspace_on_age_group(people, ids_people_2, big_group_sizes_2, small_group_sizes, len(big_group_sizes_1), next_small_start)
+        # print(f"next_small_start is {next_small_start}")
+        next_small_start = BuilderCity.group_by_workspace_on_age_group(people, ids_people_3, big_group_sizes_3, small_group_sizes, len(big_group_sizes_1) + len(big_group_sizes_2), next_small_start)
+        # print(f"next_small_start is {next_small_start}")
+
+        # print((np.histogram(list(map(lambda person: person.small_group_id, people.values())))[0][:100]))
+        # print((np.histogram(list(map(lambda person: person.big_group_id, people.values())))[0][:100]))
+
+        # print(list(map(lambda person: (person.small_group_id, person.age), people.values()))[:100])
+        # print("-----------")
+        # print(list(map(lambda person: (person.big_group_id, person.age), people.values()))[:100])
+
+
 
 
     @staticmethod
@@ -124,10 +169,10 @@ class BuilderCity:
                    big_group_sizes_sigma_2,
                    big_group_sizes_mean_3,
                    big_group_sizes_sigma_3):
-        return (np.abs(norm.rvs(loc=small_group_sizes_mean, scale=small_group_sizes_sigma, size=population_count)).astype(int),
-            np.add.accumulate(np.abs(norm.rvs(loc=big_group_sizes_mean_1, scale=big_group_sizes_sigma_1, size=population_count))).astype(int),
-            np.add.accumulate(np.abs(norm.rvs(loc=big_group_sizes_mean_2, scale=big_group_sizes_sigma_2, size=population_count))).astype(int),
-            np.add.accumulate(np.abs(norm.rvs(loc=big_group_sizes_mean_3, scale=big_group_sizes_sigma_3, size=population_count))).astype(int))
+        return (np.clip(np.abs(norm.rvs(loc=small_group_sizes_mean, scale=small_group_sizes_sigma, size=population_count)), 1, 200).astype(int),
+            np.clip(np.abs(norm.rvs(loc=big_group_sizes_mean_1, scale=big_group_sizes_sigma_1, size=population_count)), 1, 200).astype(int),
+            np.clip(np.abs(norm.rvs(loc=big_group_sizes_mean_2, scale=big_group_sizes_sigma_2, size=population_count)), 1, 200).astype(int),
+            np.clip(np.abs(norm.rvs(loc=big_group_sizes_mean_3, scale=big_group_sizes_sigma_3, size=population_count)), 1, 200).astype(int))
 
     @staticmethod
     def get_ids_people_by_age(people):

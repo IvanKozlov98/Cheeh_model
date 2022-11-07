@@ -55,6 +55,9 @@ class Box:
 class Model:
     _SECTION_CONFIG = "Model"
     RANDOM_INTERACTION = Interaction(type_interaction="Random", degree=10)  # TODO(IvanKozlov98) move to another place
+    SMALL_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=50)
+    BIG_GROUP_INTERACTION = Interaction(type_interaction="Work", degree=20)
+
     TRACES_COUNT_A = 100
     TRACES_COUNT_B = 1000
     MAX_TIME_INFECTED = 40
@@ -282,6 +285,16 @@ class Model:
 
         self._init_formulas(config_formulas)
 
+        self.id_small_group_to_group = Location.get_id_group_to_group(self.people, is_small=True)
+        self.id_big_group_to_group = Location.get_id_group_to_group(self.people, is_small=False)
+
+        # print("----------")
+        # print(list(map(len, self.id_small_group_to_group.values()))[:1000])
+        # print("----------")
+        # print("----------")
+        # print(list(map(len, self.id_big_group_to_group.values()))[:1000])
+        # print("----------")
+
 
     def _get_new_random_contacts(self):
         new_random_contacts_count = self.number_random_contacts[self.ind_number_random_contacts]
@@ -396,28 +409,32 @@ class Model:
 
     @staticmethod
     def _get_contact_list_mild(person):
-        return list(filter(lambda x: x[1].type_interaction == 'Home', person.static_contact_list))
+        return person.home_contact_list
 
     @staticmethod
     def _get_contact_list_severe(person):
         return []
+
+    def _get_small_group_list(self, person):
+        return [(person_id, Model.SMALL_GROUP_INTERACTION) for person_id in self.id_small_group_to_group.get(person.small_group_id, [])]
+
+    def _get_big_group_list(self, person):
+        return [(person_id, Model.BIG_GROUP_INTERACTION) for person_id in
+                self.id_big_group_to_group.get(person.big_group_id, [])]
+
+    def _get_static_contact_list(self, person):
+        return self._get_small_group_list(person) + self._get_big_group_list(person)
 
     def _get_contact_list_of_person(self, person):
         if person.state == 'mild':
             return Model._get_contact_list_mild(person)
         elif person.state == 'severe':
             return Model._get_contact_list_severe(person)
-        return person.static_contact_list + self._get_new_random_contacts()
+        return self._get_static_contact_list(person) + self._get_new_random_contacts()
 
     @staticmethod
     def _update_non_specific_immun(infected_person):
         pass
-
-    def _update_static_contact_lists(self, dead_ids):
-        for dead_id in dead_ids:
-            for (person_id, _) in self.people[dead_id].static_contact_list:
-                self.people[person_id].static_contact_list = [(x, interaction) for (x, interaction) in
-                                                              self.people[person_id].static_contact_list if x != dead_id]
 
     def _get_mean_median_specific_immunity(self):
         list_sp_im = []
@@ -449,7 +466,6 @@ class Model:
         # check if recovered
         elif Model._is_recovered(infected_person):
             infected_person.state = 'healthy'
-            # print(f"Recovering time: {infected_person.time_in_infected_state}")
             infected_person.time_in_infected_state = 0
             recovered_ids.append(infected_person.id)
 

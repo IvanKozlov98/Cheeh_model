@@ -8,6 +8,21 @@ import numpy as np
 class Location:
     _SECTION_CONFIG = "City"
 
+    @staticmethod
+    def get_id_group_to_group(people, is_small):
+        id_group_to_group = dict()
+        for person in people.values():
+            group_id = person.small_group_id if is_small else person.big_group_id
+            if group_id == -1:
+                continue
+            if group_id in id_group_to_group:
+                id_group_to_group[group_id].append(person.id)
+            else:
+                id_group_to_group[group_id] = [person.id]
+        return id_group_to_group
+
+
+
     def __init__(self, config_file, use_cache=True, cache_file=True):
         population_count = int(get_value_from_config(config_file, Location._SECTION_CONFIG, 'POPULATION_COUNT'))
         self.name_location = get_value_from_config(config_file, Location._SECTION_CONFIG, 'NAME_LOCATION')

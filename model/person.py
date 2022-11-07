@@ -125,7 +125,7 @@ class Person:
 
         self.alpha = 0.01
         # list of pairs kind of (agent, interaction with him)
-        self.static_contact_list = []
+        self.home_contact_list = []
         self.random_contact_list = []
 
         # label (may be one of 'healthy', 'infected', 'recovered')
@@ -143,4 +143,7 @@ class Person:
         self.flag_check_mild = False
         self.flag_check_severe = False
         self.flag_check_dead = False
+        #
+        self.small_group_id = -1
+        self.big_group_id = -1
 
