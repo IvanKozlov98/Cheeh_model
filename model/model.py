@@ -10,10 +10,10 @@ import numpy.random as nprnd
 from scipy.stats import beta
 
 
-def add_if(xs, x):
+def add_if(xs, x, eps):
     if x is not None:
         if x == 0:
-            xs.append(x + 0.00001)
+            xs.append(x + eps)
         else:
             xs.append(x)
 
@@ -42,16 +42,18 @@ class ModelStats:
                    number_light_people=None,
                    number_mild_people=None,
                    number_severe_people=None):
-        add_if(self.list_number_new_infected_people, number_new_infected_people)
-        add_if(self.list_number_recovered_people, number_recovered_people)
-        add_if(self.list_number_all_infected_people, number_all_infected_people)
-        add_if(self.list_dead_people, dead_people)
-        add_if(self.list_mean_specific_immunity, mean_specific_immunity)
-        add_if(self.list_median_specific_immunity, median_specific_immunity)
-        add_if(self.list_number_asym_people, number_asym_people)
-        add_if(self.list_number_light_people, number_light_people)
-        add_if(self.list_number_mild_people, number_mild_people)
-        add_if(self.list_number_severe_people, number_severe_people)
+        add_if(self.list_number_new_infected_people, number_new_infected_people, 1)
+        add_if(self.list_number_recovered_people, number_recovered_people, 1)
+        add_if(self.list_number_all_infected_people, number_all_infected_people, 1)
+        add_if(self.list_dead_people, dead_people, 1)
+        add_if(self.list_number_asym_people, number_asym_people, 1)
+        add_if(self.list_number_light_people, number_light_people, 1)
+        add_if(self.list_number_mild_people, number_mild_people, 1)
+        add_if(self.list_number_severe_people, number_severe_people, 1)
+
+        add_if(self.list_mean_specific_immunity, mean_specific_immunity, 0.000001)
+        add_if(self.list_median_specific_immunity, median_specific_immunity, 0.000001)
+
 
 
 
