@@ -140,7 +140,7 @@ class Person:
         #
         # self.recovering_time = 0
         self.flag_check_infected = False
-        self.flag_check_light = False
+        self.flag_check_critical = False
         self.flag_check_mild = False
         self.flag_check_severe = False
         self.flag_check_dead = False
@@ -148,24 +148,24 @@ class Person:
         self.small_group_id = -1
         self.big_group_id = -1
         #
-        self.asym_to_light_time = None
-        self.light_to_mild_time = None
+        self.asym_to_mild_time = None
         self.mild_to_severe_time = None
-        self.severe_to_death_time = None
+        self.severe_to_critical_time = None
+        self.critical_to_death_time = None
 
         self.asym_to_recovery_time = None
-        self.light_to_recovery_time = None
         self.mild_to_revovery_time = None
         self.severe_to_recovery_time = None
+        self.critical_to_recovery_time = None
         ##
-        self.cur_asym_to_light_time = 0
-        self.cur_light_to_mild_time = 0
+        self.cur_asym_to_mild_time = 0
         self.cur_mild_to_severe_time = 0
-        self.cur_severe_to_death_time = 0
+        self.cur_severe_to_critical_time = 0
+        self.cur_critical_to_death_time = 0
 
         self.cur_asym_to_recovery_time = 0
-        self.cur_light_to_recovery_time = 0
         self.cur_mild_to_revovery_time = 0
         self.cur_severe_to_recovery_time = 0
+        self.cur_critical_to_recovery_time = 0
 
 

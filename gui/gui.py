@@ -99,9 +99,9 @@ class GuiApp(tk.Tk):
         self.plot_epid.plot([0], [0], color="red", label="number dead people")
         if self.is_show_cases:
             self.plot_epid.plot([0], [0], color="pink", label="number asymp people")
-            self.plot_epid.plot([0], [0], color="purple", label="number light people")
             self.plot_epid.plot([0], [0], color="brown", label="number mild people")
             self.plot_epid.plot([0], [0], color="black", label="number severe people")
+            self.plot_epid.plot([0], [0], color="purple", label="number critical people")
 
         self.plot_epid.legend(loc='upper left', fontsize=5)
         self.canvas_epid = FigureCanvasTkAgg(self.figure_epid, self.tab_epidemic)
@@ -131,12 +131,12 @@ class GuiApp(tk.Tk):
             if self.is_show_cases:
                 self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_asym_people),
                                     color="pink", label="number asymp people")
-                self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_light_people),
-                                    color="purple", label="number light people")
                 self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_mild_people),
                                     color="brown", label="number mild people")
                 self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_severe_people),
                                     color="black", label="number severe people")
+                self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_critical_people),
+                                    color="purple", label="number critical people")
         else:
             self.plot_epid.plot(times, self.model.get_model_stats().list_number_new_infected_people,
                                 color="blue", label="number new infected people")
@@ -148,12 +148,12 @@ class GuiApp(tk.Tk):
             if self.is_show_cases:
                 self.plot_epid.plot(times, self.model.get_model_stats().list_number_asym_people,
                                     color="pink", label="number asymp people")
-                self.plot_epid.plot(times, self.model.get_model_stats().list_number_light_people,
-                                    color="purple", label="number light people")
                 self.plot_epid.plot(times, self.model.get_model_stats().list_number_mild_people,
                                     color="brown", label="number mild people")
                 self.plot_epid.plot(times, self.model.get_model_stats().list_number_severe_people,
                                     color="black", label="number severe people")
+                self.plot_epid.plot(times, self.model.get_model_stats().list_number_critical_people,
+                                    color="purple", label="number critical people")
 
         self.canvas_epid = FigureCanvasTkAgg(self.figure_epid, self.tab_epidemic)
         self.canvas_epid.get_tk_widget().grid(row=0, column=0)

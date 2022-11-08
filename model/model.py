@@ -27,9 +27,9 @@ class ModelStats:
         self.list_median_specific_immunity = []
         #
         self.list_number_asym_people = []
-        self.list_number_light_people = []
         self.list_number_mild_people = []
         self.list_number_severe_people = []
+        self.list_number_critical_people = []
 
     def add_values(self,
                    number_new_infected_people=None,
@@ -39,17 +39,17 @@ class ModelStats:
                    mean_specific_immunity=None,
                    median_specific_immunity=None,
                    number_asym_people=None,
-                   number_light_people=None,
                    number_mild_people=None,
-                   number_severe_people=None):
+                   number_severe_people=None,
+                   number_critical_people=None):
         add_if(self.list_number_new_infected_people, number_new_infected_people, 1)
         add_if(self.list_number_recovered_people, number_recovered_people, 1)
         add_if(self.list_number_all_infected_people, number_all_infected_people, 1)
         add_if(self.list_dead_people, dead_people, 1)
         add_if(self.list_number_asym_people, number_asym_people, 1)
-        add_if(self.list_number_light_people, number_light_people, 1)
         add_if(self.list_number_mild_people, number_mild_people, 1)
         add_if(self.list_number_severe_people, number_severe_people, 1)
+        add_if(self.list_number_critical_people, number_critical_people, 1)
 
         add_if(self.list_mean_specific_immunity, mean_specific_immunity, 0.000001)
         add_if(self.list_median_specific_immunity, median_specific_immunity, 0.000001)
@@ -200,8 +200,8 @@ class Model:
         for person in self.people.values():
             people_by_age_dict[person.age] += 1
 
-        prob_light_dict, prob_mild_dict, prob_severe_dict, prob_dead_dict = Model.get_probs_tr()
-        solve_prob_light_dict = dict()
+        prob_mild_dict, prob_severe_dict, prob_dead_dict, prob_critical_dict = Model.get_probs_tr()
+        solve_prob_critical_dict = dict()
         solve_prob_mild_dict = dict()
         solve_prob_severe_dict = dict()
         solve_prob_dead_dict = dict()
@@ -209,15 +209,15 @@ class Model:
 
         for (age, cnt) in people_by_age_dict.items():
             solve_prob_infected_dict[age] = np.random.choice(2, size=self.DAYS_COUNT * cnt, p=[0.4, 0.6])
-            solve_prob_light_dict[age] = np.random.choice(2, size=cnt, p=[1 - prob_light_dict[age], prob_light_dict[age]])
             solve_prob_mild_dict[age] = np.random.choice(2, size=cnt, p=[1 - prob_mild_dict[age], prob_mild_dict[age]])
             solve_prob_severe_dict[age] = np.random.choice(2, size=cnt, p=[1 - prob_severe_dict[age], prob_severe_dict[age]])
+            solve_prob_critical_dict[age] = np.random.choice(2, size=cnt, p=[1 - prob_critical_dict[age], prob_critical_dict[age]])
             solve_prob_dead_dict[age] = np.random.choice(2, size=cnt, p=[1 - prob_dead_dict[age], prob_dead_dict[age]])
 
         self.solve_prob_infected = Box(solve_prob_infected_dict)
-        self.solve_prob_light = Box(solve_prob_light_dict)
         self.solve_prob_mild = Box(solve_prob_mild_dict)
         self.solve_prob_severe = Box(solve_prob_severe_dict)
+        self.solve_prob_critical = Box(solve_prob_critical_dict)
         self.solve_prob_dead = Box(solve_prob_dead_dict)
 
     @staticmethod
@@ -233,13 +233,13 @@ class Model:
                                     get_value_from_config(config_formulas, "Formulas", 'VIRAL_LOAD_NEXT')
         self.next_viral_load_func = Model.create_func_obj(next_viral_load_func_code)
         ############
-        next_specific_immun_func_code = "def _get_next_specific_immun__(cur_specific_immun, cur_viral_load, alpha):\n    import numpy as np \n    return " +\
+        next_specific_immun_func_code = "def _get_next_specific_immun__(cur_specific_immun, cur_viral_load, alpha):\n    import numpy as np \n    return " + \
                                         get_value_from_config(config_formulas, "Formulas", 'SPECIFIC_IMMUNITY_NEXT')
         self.next_specific_immun_func = Model.create_func_obj(next_specific_immun_func_code)
-    #     giving_viral_load_func
+        #     giving_viral_load_func
         ############
         giving_viral_load_func_code = "def _giving_viral_load__(interaction_degree, viral_load, R, specific_immun):\n    import numpy as np \n    return " + \
-                                        get_value_from_config(config_formulas, "Formulas", 'GIVING_INFECTED')
+                                      get_value_from_config(config_formulas, "Formulas", 'GIVING_INFECTED')
         self.giving_viral_load_func = Model.create_func_obj(giving_viral_load_func_code)
 
     def _init_time_infect(self):
@@ -453,9 +453,9 @@ class Model:
     @staticmethod
     def _is_recovered(person):
         return person.cur_asym_to_recovery_time == person.asym_to_recovery_time or \
-                person.cur_light_to_recovery_time == person.light_to_recovery_time or \
-                person.cur_mild_to_revovery_time == person.mild_to_revovery_time or \
-                person.cur_severe_to_recovery_time == person.severe_to_recovery_time
+               person.cur_critical_to_recovery_time == person.critical_to_recovery_time or \
+               person.cur_mild_to_revovery_time == person.mild_to_revovery_time or \
+               person.cur_severe_to_recovery_time == person.severe_to_recovery_time
 
     def _recovery_non_infected_people_step(self):
         for person in self.people.values():
@@ -484,7 +484,7 @@ class Model:
     def _get_contact_list_of_person(self, person):
         if person.state == 'mild':
             return Model._get_contact_list_mild(person)
-        elif person.state == 'severe':
+        elif person.state == 'severe' or person.state == 'critical':
             return Model._get_contact_list_severe(person)
         return self._get_static_contact_list(person) + self._get_new_random_contacts()
 
@@ -501,31 +501,22 @@ class Model:
 
     def _get_diff_cases(self):
         number_asym_people = 0
-        number_light_people = 0
+        number_critical_people = 0
         number_mild_people = 0
         number_severe_people = 0
         for person in self.people.values():
             number_asym_people += (person.state == 'asymp')
-            number_light_people += (person.state == 'light')
             number_mild_people += (person.state == 'mild')
             number_severe_people += (person.state == 'severe')
-        return (number_asym_people,
-                number_light_people,
-                number_mild_people,
-                number_severe_people)
+            number_critical_people += (person.state == 'critical')
+        return number_asym_people, number_mild_people, number_severe_people, number_critical_people
 
     def _update_state_infected_person(self, infected_person, dead_ids, recovered_ids):
         infected_person.time_in_infected_state += 1
         age = infected_person.age
         if infected_person.state == 'asymp':
-            infected_person.cur_asym_to_light_time += 1
+            infected_person.cur_asym_to_mild_time += 1
             infected_person.cur_asym_to_recovery_time += 1
-            if (not infected_person.flag_check_light) and self.solve_prob_light.next(age):
-                infected_person.state = 'light'
-            infected_person.flag_check_light = True
-        elif infected_person.state == 'light':
-            infected_person.cur_light_to_mild_time += 1
-            infected_person.cur_light_to_recovery_time += 1
             if (not infected_person.flag_check_mild) and self.solve_prob_mild.next(age):
                 infected_person.state = 'mild'
             infected_person.flag_check_mild = True
@@ -536,10 +527,17 @@ class Model:
                 infected_person.state = 'severe'
             infected_person.flag_check_severe = True
         elif infected_person.state == 'severe':
-            infected_person.cur_severe_to_death_time += 1
+            infected_person.cur_severe_to_critical_time += 1
             infected_person.cur_severe_to_recovery_time += 1
+            if (not infected_person.flag_check_critical) and self.solve_prob_critical.next(age):
+                infected_person.state = 'critical'
+            infected_person.flag_check_critical = True
+        elif infected_person.state == 'critical':
+            infected_person.cur_critical_to_death_time += 1
+            infected_person.cur_critical_to_recovery_time += 1
             if (not infected_person.flag_check_dead) and self.solve_prob_dead.next(age):
                 infected_person.state = 'dead'
+                dead_ids.append(infected_person.id)
             infected_person.flag_check_dead = True
         # check if recovered
         if Model._is_recovered(infected_person):
@@ -593,20 +591,20 @@ class Model:
         self.infected_people_ids.difference_update(dead_ids)
         number_all_infected_people = len(self.infected_people_ids)
         mean_specific_immunity, median_specific_immunity = self._get_mean_median_specific_immunity()
-        number_asym_people, number_light_people, number_mild_people, number_severe_people = self._get_diff_cases()
+        number_asym_people, number_mild_people, number_severe_people, number_critical_people = self._get_diff_cases()
 
         if self.gui:
             self.model_stats.add_values(
-                number_new_infected_people,
-                number_recovered_people,
-                number_all_infected_people,
-                len(dead_ids),
-                mean_specific_immunity,
-                median_specific_immunity,
-                number_asym_people,
-                number_light_people,
-                number_mild_people,
-                number_severe_people
+                number_new_infected_people=number_new_infected_people,
+                number_recovered_people=number_recovered_people,
+                number_all_infected_people=number_all_infected_people,
+                dead_people=len(dead_ids),
+                mean_specific_immunity=mean_specific_immunity,
+                median_specific_immunity=median_specific_immunity,
+                number_asym_people=number_asym_people,
+                number_mild_people=number_mild_people,
+                number_severe_people=number_severe_people,
+                number_critical_people=number_critical_people
             )
             time.sleep(1)
             if self.flag_run:
