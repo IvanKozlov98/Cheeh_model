@@ -60,6 +60,7 @@ class GuiApp(tk.Tk):
         self.days_count = None
 
         self.is_log = False
+        self.is_show_cases = False
         self.initialize()
 
     @staticmethod
@@ -96,6 +97,12 @@ class GuiApp(tk.Tk):
         self.plot_epid.plot([0], [0], color="orange", label="number recovered people")
         self.plot_epid.plot([0], [0], color="green", label="number all infected people")
         self.plot_epid.plot([0], [0], color="red", label="number dead people")
+        if self.is_show_cases:
+            self.plot_epid.plot([0], [0], color="pink", label="number asymp people")
+            self.plot_epid.plot([0], [0], color="purple", label="number light people")
+            self.plot_epid.plot([0], [0], color="brown", label="number mild people")
+            self.plot_epid.plot([0], [0], color="black", label="number severe people")
+
         self.plot_epid.legend(loc='upper left', fontsize=5)
         self.canvas_epid = FigureCanvasTkAgg(self.figure_epid, self.tab_epidemic)
         self.canvas_epid.get_tk_widget().grid(row=0, column=0)
@@ -121,6 +128,15 @@ class GuiApp(tk.Tk):
             self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_all_infected_people),
                                 color="green", label="number all infected people")
             self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_dead_people), color="red", label="number dead people")
+            if self.is_show_cases:
+                self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_asym_people),
+                                    color="pink", label="number asymp people")
+                self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_light_people),
+                                    color="purple", label="number light people")
+                self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_mild_people),
+                                    color="brown", label="number mild people")
+                self.plot_epid.plot(times, np.log(self.model.get_model_stats().list_number_severe_people),
+                                    color="black", label="number severe people")
         else:
             self.plot_epid.plot(times, self.model.get_model_stats().list_number_new_infected_people,
                                 color="blue", label="number new infected people")
@@ -129,6 +145,16 @@ class GuiApp(tk.Tk):
             self.plot_epid.plot(times, self.model.get_model_stats().list_number_all_infected_people,
                                 color="green", label="number all infected people")
             self.plot_epid.plot(times, self.model.get_model_stats().list_dead_people, color="red", label="number dead people")
+            if self.is_show_cases:
+                self.plot_epid.plot(times, self.model.get_model_stats().list_number_asym_people,
+                                    color="pink", label="number asymp people")
+                self.plot_epid.plot(times, self.model.get_model_stats().list_number_light_people,
+                                    color="purple", label="number light people")
+                self.plot_epid.plot(times, self.model.get_model_stats().list_number_mild_people,
+                                    color="brown", label="number mild people")
+                self.plot_epid.plot(times, self.model.get_model_stats().list_number_severe_people,
+                                    color="black", label="number severe people")
+
         self.canvas_epid = FigureCanvasTkAgg(self.figure_epid, self.tab_epidemic)
         self.canvas_epid.get_tk_widget().grid(row=0, column=0)
         self.figure_epid.canvas.draw()
@@ -455,7 +481,18 @@ class GuiApp(tk.Tk):
                          onvalue=1, offvalue=0,
                          command=change_y_axis)
         c1.pack(anchor=W, padx=10)
-
+        #############
+        log_var_1 = BooleanVar()
+        def change_y_axis_1():
+            self.is_show_cases = log_var_1.get()
+            self.clear_graph()
+            self.update()
+        log_var_1.set(False)
+        c2 = Checkbutton(self.frame2, text="Show cases",
+                         variable=log_var_1,
+                         onvalue=1, offvalue=0,
+                         command=change_y_axis_1)
+        c2.pack(anchor=W, padx=10)
         #########################################
 
         frameBottom = Frame(frame1)

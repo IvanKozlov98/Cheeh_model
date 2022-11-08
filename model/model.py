@@ -25,7 +25,11 @@ class ModelStats:
         self.list_dead_people = []
         self.list_mean_specific_immunity = []
         self.list_median_specific_immunity = []
-
+        #
+        self.list_number_asym_people = []
+        self.list_number_light_people = []
+        self.list_number_mild_people = []
+        self.list_number_severe_people = []
 
     def add_values(self,
                    number_new_infected_people=None,
@@ -33,13 +37,23 @@ class ModelStats:
                    number_all_infected_people=None,
                    dead_people=None,
                    mean_specific_immunity=None,
-                   median_specific_immunity=None):
+                   median_specific_immunity=None,
+                   number_asym_people=None,
+                   number_light_people=None,
+                   number_mild_people=None,
+                   number_severe_people=None):
         add_if(self.list_number_new_infected_people, number_new_infected_people)
         add_if(self.list_number_recovered_people, number_recovered_people)
         add_if(self.list_number_all_infected_people, number_all_infected_people)
         add_if(self.list_dead_people, dead_people)
         add_if(self.list_mean_specific_immunity, mean_specific_immunity)
         add_if(self.list_median_specific_immunity, median_specific_immunity)
+        add_if(self.list_number_asym_people, number_asym_people)
+        add_if(self.list_number_light_people, number_light_people)
+        add_if(self.list_number_mild_people, number_mild_people)
+        add_if(self.list_number_severe_people, number_severe_people)
+
+
 
 
 class Box:
@@ -483,6 +497,21 @@ class Model:
         list_sp_im = np.array(list_sp_im)
         return np.mean(list_sp_im), np.median(list_sp_im)
 
+    def _get_diff_cases(self):
+        number_asym_people = 0
+        number_light_people = 0
+        number_mild_people = 0
+        number_severe_people = 0
+        for person in self.people.values():
+            number_asym_people += (person.state == 'asymp')
+            number_light_people += (person.state == 'light')
+            number_mild_people += (person.state == 'mild')
+            number_severe_people += (person.state == 'severe')
+        return (number_asym_people,
+                number_light_people,
+                number_mild_people,
+                number_severe_people)
+
     def _update_state_infected_person(self, infected_person, dead_ids, recovered_ids):
         infected_person.time_in_infected_state += 1
         age = infected_person.age
@@ -562,6 +591,7 @@ class Model:
         self.infected_people_ids.difference_update(dead_ids)
         number_all_infected_people = len(self.infected_people_ids)
         mean_specific_immunity, median_specific_immunity = self._get_mean_median_specific_immunity()
+        number_asym_people, number_light_people, number_mild_people, number_severe_people = self._get_diff_cases()
 
         if self.gui:
             self.model_stats.add_values(
@@ -570,7 +600,11 @@ class Model:
                 number_all_infected_people,
                 len(dead_ids),
                 mean_specific_immunity,
-                median_specific_immunity
+                median_specific_immunity,
+                number_asym_people,
+                number_light_people,
+                number_mild_people,
+                number_severe_people
             )
             time.sleep(1)
             if self.flag_run:
