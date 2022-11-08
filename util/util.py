@@ -1,4 +1,6 @@
 import configparser
+from scipy.stats import lognorm
+import numpy as np
 
 
 def get_alpha_beta(mu, sigma):
@@ -32,3 +34,10 @@ def get_in_range(left, num, right):
     if num > right:
         return right
     return num
+
+
+def get_lognormal_dist(mean, std, size):
+    a = 1 + (std / mean) ** 2
+    s = np.sqrt(np.log(a))
+    scale = mean / np.sqrt(a)
+    return lognorm.rvs(s=s, scale=scale, size=size)
