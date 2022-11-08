@@ -13,7 +13,7 @@ from scipy.stats import beta
 def add_if(xs, x):
     if x is not None:
         if x == 0:
-            xs.append(x + 1)
+            xs.append(x + 0.00001)
         else:
             xs.append(x)
 
